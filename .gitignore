@@ -1,0 +1,9 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+
+sessions/last_prompt.md
+sessions/last_response.md
+
+.DS_Store
