@@ -1,0 +1,18 @@
+{
+  "program_id": "microsoft-teams-latam",
+  "program_name": "Microsoft Teams LATAM",
+  "description": "Microsoft Teams deployment for 8000 users in Mexico, Colombia and Chile.",
+  "phase": "Program Initiation",
+  "health": "Unknown",
+  "confidence": "Medium",
+  "risks": [
+    {
+      "description": "Adoption risk in Colombia due to limited change management readiness.",
+      "status": "Open"
+    }
+  ],
+  "issues": [],
+  "decisions": [],
+  "next_actions": [],
+  "last_update": null
+}
