@@ -32,6 +32,22 @@ def add_risk(program):
     print("\nRisk added successfully.")
 
 
+def add_issue(program):
+    issue = input("\nDescribe the issue:\n\n")
+
+    if not issue.strip():
+        print("Issue cannot be empty.")
+        return
+
+    program["issues"].append({
+        "description": issue,
+        "status": "Open"
+    })
+
+    save_program(program)
+    print("\nIssue added successfully.")
+
+
 def add_decision(program):
     decision = input("\nDescribe the decision:\n\n")
 
@@ -109,6 +125,7 @@ def open_workspace(program_id):
         print("3. Add Next Action")
         print("4. Update Health")
         print("5. Generate Executive Report")
+        print("6. Add Issue")
         print("0. Exit Workspace")
 
         option = input("\nChoose an option:\n\n")
@@ -123,6 +140,8 @@ def open_workspace(program_id):
             update_health(program)
         elif option == "5":
             create_executive_report(program)
+        elif option == "6":
+            add_issue(program)
         elif option == "0":
             print("\nExiting workspace.")
             break
