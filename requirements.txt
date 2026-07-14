@@ -1,0 +1,2 @@
+# No third-party Python packages are required by the current application code.
+# Imports under app/ use the Python standard library and local modules only.
