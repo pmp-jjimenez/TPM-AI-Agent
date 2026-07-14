@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from memory import load_program, save_program
 from executive import generate_executive_report
 
@@ -33,7 +35,7 @@ def add_risk(program):
 
 
 def add_issue(program):
-    issue = input("\nDescribe the issue:\n\n").strip()
+    issue = input("\nIssue description:\n\n").strip()
 
     if not issue:
         print("Issue cannot be empty.")
@@ -45,10 +47,16 @@ def add_issue(program):
         print("Issue owner cannot be empty.")
         return
 
-    due_date = input("\nDue date:\n\n").strip()
+    due_date = input("\nDue date (YYYY-MM-DD):\n\n").strip()
 
     if not due_date:
         print("Due date cannot be empty.")
+        return
+
+    try:
+        datetime.strptime(due_date, "%Y-%m-%d")
+    except ValueError:
+        print("Invalid date. Use YYYY-MM-DD.")
         return
 
     program["issues"].append({
@@ -86,10 +94,12 @@ def list_open_issues(program):
 
     if not open_issues:
         print("\nThere are no open issues.")
+        input("\nPress Enter to return to the workspace...")
         return
 
     print("\nOpen Issues:")
     display_open_issues(open_issues)
+    input("\nPress Enter to return to the workspace...")
 
 
 def close_issue(program):
