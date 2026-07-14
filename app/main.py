@@ -1,7 +1,7 @@
 def main():
-    print("=" * 60)
-    print("        TPM OPERATING SYSTEM v0.1")
-    print("=" * 60)
+    print("TPM OPERATING SYSTEM")
+    print("Version: 0.2-dev")
+    print("Program Intelligence for Technical Program Managers")
 
     print("\nSelect an option:\n")
 
