@@ -47,17 +47,14 @@ def add_issue(program):
         print("Issue owner cannot be empty.")
         return
 
-    due_date = input("\nDue date (YYYY-MM-DD):\n\n").strip()
+    while True:
+        due_date = input("\nDue date (YYYY-MM-DD):\n\n").strip()
 
-    if not due_date:
-        print("Due date cannot be empty.")
-        return
-
-    try:
-        datetime.strptime(due_date, "%Y-%m-%d")
-    except ValueError:
-        print("Invalid date. Use YYYY-MM-DD.")
-        return
+        try:
+            datetime.strptime(due_date, "%Y-%m-%d")
+            break
+        except ValueError:
+            print("Invalid date. Use YYYY-MM-DD.")
 
     program["issues"].append({
         "description": issue,
@@ -68,6 +65,7 @@ def add_issue(program):
 
     save_program(program)
     print("\nIssue added successfully.")
+    input("\nPress Enter to return to the workspace...")
 
 
 def get_open_issues(program):
@@ -116,12 +114,14 @@ def close_issue(program):
 
     if not selection.isdigit():
         print("Invalid issue number.")
+        input("\nPress Enter to return to the workspace...")
         return
 
     selected_number = int(selection)
 
     if selected_number < 1 or selected_number > len(open_issues):
         print("Invalid issue number.")
+        input("\nPress Enter to return to the workspace...")
         return
 
     issue_index, _ = open_issues[selected_number - 1]
@@ -129,6 +129,7 @@ def close_issue(program):
 
     save_program(program)
     print("\nIssue closed successfully.")
+    input("\nPress Enter to return to the workspace...")
 
 
 def add_decision(program):
