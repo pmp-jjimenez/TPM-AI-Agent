@@ -1,4 +1,5 @@
 from memory import load_program, save_program
+from executive import generate_executive_report
 
 
 def show_summary(program):
@@ -85,6 +86,13 @@ def update_health(program):
     print("\nHealth updated successfully.")
 
 
+def create_executive_report(program):
+    report_path = generate_executive_report(program)
+
+    print("\nExecutive report generated successfully.")
+    print(f"Saved to: {report_path}")
+
+
 def open_workspace(program_id):
     program = load_program(program_id)
 
@@ -100,6 +108,7 @@ def open_workspace(program_id):
         print("2. Add Decision")
         print("3. Add Next Action")
         print("4. Update Health")
+        print("5. Generate Executive Report")
         print("0. Exit Workspace")
 
         option = input("\nChoose an option:\n\n")
@@ -112,6 +121,8 @@ def open_workspace(program_id):
             add_action(program)
         elif option == "4":
             update_health(program)
+        elif option == "5":
+            create_executive_report(program)
         elif option == "0":
             print("\nExiting workspace.")
             break
