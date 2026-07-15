@@ -124,3 +124,44 @@ Implemented by this documentation-only change set:
 - Eight new expert persona documents.
 
 No Python code, JSON program data, dependency installation, or Git commit is part of this change set.
+
+## Persona Routing Foundation v1
+
+Sprint 51.
+
+Implemented:
+
+- Added deterministic persona routing in `app/persona_router.py`.
+- Added a canonical persona registry with stable machine-readable identifiers.
+- Added routing result structure with `primary_persona`, `supporting_personas`, `reasons`, and `routing_version`.
+- Implemented rule-based routing for:
+  - New program and program initiation context.
+  - Cloud, migration, infrastructure, and architecture context.
+  - Major incident, outage, severity, service disruption, and incident mode.
+  - Executive review and executive reporting.
+  - Operational readiness, production readiness, go-live readiness, and handoff.
+  - Security, compliance, privacy, and security-related risk.
+  - Adoption, training, communications, and organizational change.
+  - Customer satisfaction, customer escalation, retention, and adoption outcome.
+  - Delivery execution, schedule pressure, milestone slippage, and dependency coordination.
+- Added unittest coverage for default routing, required routing scenarios, simultaneous signals, duplicate prevention, primary exclusion from supporting personas, stable ordering, missing or legacy fields, deterministic output, and input immutability.
+
+Not implemented:
+
+- No multiple AI calls.
+- No autonomous agents.
+- No Gemini dependency for routing.
+- No CLI behavior change.
+- No canonical program schema change.
+
+Known limitations:
+
+- Routing uses explicit keyword and structured-field rules only.
+- The router does not interpret ambiguous intent beyond deterministic term matching.
+- Persona routing is not yet connected to prompt construction, workspace actions, or report generation.
+
+Logical next steps:
+
+- Integrate routing results into CLI workflows and generated prompts.
+- Add user-visible routing summaries where useful.
+- Build AI Expert Council orchestration only after deterministic routing is exercised in real workflows.
