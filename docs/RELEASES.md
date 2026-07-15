@@ -124,3 +124,85 @@ Implemented by this documentation-only change set:
 - Eight new expert persona documents.
 
 No Python code, JSON program data, dependency installation, or Git commit is part of this change set.
+
+## Persona Routing Foundation v1
+
+Sprint 51.
+
+Implemented:
+
+- Added deterministic persona routing in `app/persona_router.py`.
+- Added a canonical persona registry with stable machine-readable identifiers.
+- Added routing result structure with `primary_persona`, `supporting_personas`, `reasons`, and `routing_version`.
+- Implemented rule-based routing for:
+  - New program and program initiation context.
+  - Cloud, migration, infrastructure, and architecture context.
+  - Major incident, outage, severity, service disruption, and incident mode.
+  - Executive review and executive reporting.
+  - Operational readiness, production readiness, go-live readiness, and handoff.
+  - Security, compliance, privacy, and security-related risk.
+  - Adoption, training, communications, and organizational change.
+  - Customer satisfaction, customer escalation, retention, and adoption outcome.
+  - Delivery execution, schedule pressure, milestone slippage, and dependency coordination.
+- Added unittest coverage for default routing, required routing scenarios, simultaneous signals, duplicate prevention, primary exclusion from supporting personas, stable ordering, missing or legacy fields, deterministic output, and input immutability.
+
+Not implemented:
+
+- No multiple AI calls.
+- No autonomous agents.
+- No Gemini dependency for routing.
+- No CLI behavior change.
+- No canonical program schema change.
+
+Known limitations:
+
+- Routing uses explicit keyword and structured-field rules only.
+- The router does not interpret ambiguous intent beyond deterministic term matching.
+- Persona routing is not yet connected to prompt construction, workspace actions, or report generation.
+
+Logical next steps:
+
+- Integrate routing results into CLI workflows and generated prompts.
+- Add user-visible routing summaries where useful.
+- Build AI Expert Council orchestration only after deterministic routing is exercised in real workflows.
+
+## Sprint 52: CLI Persona Routing Integration v1
+
+Current working change set.
+
+Implemented:
+
+- Integrated the Sprint 51 deterministic persona router with the CLI and New Program prompt path.
+- Added CLI integration boundary that builds non-mutating routing context, calls routing once per top-level operation, and provides safe Technical Program Manager fallback if routing fails.
+- Added concise CLI persona routing presentation using human-readable names from `PERSONA_REGISTRY`.
+- Integrated routing display into:
+  - Start New Program.
+  - Manage Active Program.
+  - Major Incident placeholder.
+  - Executive Review placeholder.
+  - Operational Readiness placeholder.
+- Extended New Program prompt construction with optional `PERSONA ROUTING CONTEXT`.
+- Passed the already-calculated routing result from CLI routing into the New Program prompt path.
+- Preserved existing prompt-builder callers by keeping routing optional.
+- Added focused `unittest` coverage for routing presentation, prompt routing context, route-once integration behavior, fallback, and non-mutation.
+
+Explicit non-goals:
+
+- No multi-agent orchestration.
+- No additional Gemini calls.
+- No one-call-per-persona behavior.
+- No simulated expert debate.
+- No program schema change.
+- No routing persistence in program JSON.
+- No completion of placeholder Major Incident, Executive Review, or Operational Readiness workflows.
+- No Stakeholder Council or executive governance persona layer.
+
+Known limitations:
+
+- Persona routing is deterministic and intentionally lightweight.
+- Prompt routing context is currently wired into the New Program AI flow only because that is the only current Gemini-backed workflow.
+- Placeholder menu items display expected routing but still do not provide full operational workflows.
+
+Recommended next step:
+
+- Sprint 53 should add a real workflow-level execution boundary for the next highest-value mode, likely Operational Readiness or Major Incident, and reuse the same route-once routing pattern when prompt generation is introduced there.

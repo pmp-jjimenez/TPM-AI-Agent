@@ -32,6 +32,33 @@ class PromptBuilderTests(unittest.TestCase):
         self.assertIn("Confidence Level", prompt)
         self.assertIn("Reason for Confidence", prompt)
 
+    def test_prompt_builder_includes_optional_persona_routing_context(self):
+        routing = {
+            "primary_persona": "technical_program_manager",
+            "supporting_personas": ["cloud_architect", "security_advisor"],
+            "reasons": [
+                "Cloud or infrastructure context added Cloud Architect.",
+                "Security or compliance context added Security Advisor.",
+            ],
+            "routing_version": "test",
+        }
+
+        prompt = build_new_program_prompt(
+            "Deploy secure cloud infrastructure.",
+            "TPM context.",
+            persona_routing=routing,
+        )
+
+        self.assertIn("PERSONA ROUTING CONTEXT", prompt)
+        self.assertIn("Primary persona:", prompt)
+        self.assertIn("Technical Program Manager", prompt)
+        self.assertIn("- Cloud Architect", prompt)
+        self.assertIn("- Security Advisor", prompt)
+        self.assertIn("Cloud or infrastructure context", prompt)
+        self.assertIn("Security or compliance context", prompt)
+        self.assertIn("Do not claim that independent autonomous agents were executed.", prompt)
+        self.assertNotIn("Multiple agents were executed", prompt)
+
 
 if __name__ == "__main__":
     unittest.main()
