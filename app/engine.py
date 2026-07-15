@@ -3,7 +3,7 @@ from prompt_builder import build_new_program_prompt
 from llm import generate_response
 
 
-def analyze_new_program(project_description):
+def analyze_new_program(project_description, persona_routing=None):
 
     if not project_description.strip():
         print("\nERROR: Project description cannot be empty.")
@@ -15,7 +15,8 @@ def analyze_new_program(project_description):
 
     prompt = build_new_program_prompt(
         project_description,
-        context
+        context,
+        persona_routing=persona_routing
     )
 
     print("AI-ready prompt created.")

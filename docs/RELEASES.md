@@ -165,3 +165,44 @@ Logical next steps:
 - Integrate routing results into CLI workflows and generated prompts.
 - Add user-visible routing summaries where useful.
 - Build AI Expert Council orchestration only after deterministic routing is exercised in real workflows.
+
+## Sprint 52: CLI Persona Routing Integration v1
+
+Current working change set.
+
+Implemented:
+
+- Integrated the Sprint 51 deterministic persona router with the CLI and New Program prompt path.
+- Added CLI integration boundary that builds non-mutating routing context, calls routing once per top-level operation, and provides safe Technical Program Manager fallback if routing fails.
+- Added concise CLI persona routing presentation using human-readable names from `PERSONA_REGISTRY`.
+- Integrated routing display into:
+  - Start New Program.
+  - Manage Active Program.
+  - Major Incident placeholder.
+  - Executive Review placeholder.
+  - Operational Readiness placeholder.
+- Extended New Program prompt construction with optional `PERSONA ROUTING CONTEXT`.
+- Passed the already-calculated routing result from CLI routing into the New Program prompt path.
+- Preserved existing prompt-builder callers by keeping routing optional.
+- Added focused `unittest` coverage for routing presentation, prompt routing context, route-once integration behavior, fallback, and non-mutation.
+
+Explicit non-goals:
+
+- No multi-agent orchestration.
+- No additional Gemini calls.
+- No one-call-per-persona behavior.
+- No simulated expert debate.
+- No program schema change.
+- No routing persistence in program JSON.
+- No completion of placeholder Major Incident, Executive Review, or Operational Readiness workflows.
+- No Stakeholder Council or executive governance persona layer.
+
+Known limitations:
+
+- Persona routing is deterministic and intentionally lightweight.
+- Prompt routing context is currently wired into the New Program AI flow only because that is the only current Gemini-backed workflow.
+- Placeholder menu items display expected routing but still do not provide full operational workflows.
+
+Recommended next step:
+
+- Sprint 53 should add a real workflow-level execution boundary for the next highest-value mode, likely Operational Readiness or Major Incident, and reuse the same route-once routing pattern when prompt generation is introduced there.
