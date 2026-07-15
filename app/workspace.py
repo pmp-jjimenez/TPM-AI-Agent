@@ -2,6 +2,7 @@ from datetime import datetime
 
 from memory import load_program, save_program
 from executive import generate_executive_report
+from schema import generate_item_id
 
 
 def show_summary(program):
@@ -26,6 +27,7 @@ def add_risk(program):
         return
 
     program["risks"].append({
+        "risk_id": generate_item_id("risk"),
         "description": risk,
         "status": "Open"
     })
@@ -57,6 +59,7 @@ def add_issue(program):
             print("Invalid date. Use YYYY-MM-DD.")
 
     program["issues"].append({
+        "issue_id": generate_item_id("issue"),
         "description": issue,
         "owner": owner,
         "due_date": due_date,
@@ -140,6 +143,7 @@ def add_decision(program):
         return
 
     program["decisions"].append({
+        "decision_id": generate_item_id("decision"),
         "description": decision,
         "status": "Open"
     })
@@ -156,6 +160,7 @@ def add_action(program):
         return
 
     program["next_actions"].append({
+        "action_id": generate_item_id("action"),
         "description": action,
         "status": "Open"
     })

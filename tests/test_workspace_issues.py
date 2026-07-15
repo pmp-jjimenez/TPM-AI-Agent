@@ -1,7 +1,9 @@
 import io
+import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
+from unittest.mock import patch
 
 import sys
 
@@ -11,7 +13,16 @@ APP_DIR = ROOT / "app"
 if str(APP_DIR) not in sys.path:
     sys.path.insert(0, str(APP_DIR))
 
-from workspace import display_open_issues, get_open_issues
+import memory
+from workspace import (
+    add_action,
+    add_decision,
+    add_issue,
+    add_risk,
+    close_issue,
+    display_open_issues,
+    get_open_issues,
+)
 
 
 class WorkspaceIssueHelperTests(unittest.TestCase):
@@ -44,6 +55,71 @@ class WorkspaceIssueHelperTests(unittest.TestCase):
         self.assertIn("Owner   : Not assigned", rendered)
         self.assertIn("Due date: Not defined", rendered)
         self.assertIn("Status  : Open", rendered)
+
+    def test_new_workspace_items_receive_stable_ids(self):
+        original_data_dir = memory.DATA_DIR
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            memory.DATA_DIR = Path(temp_dir) / "programs"
+            program = memory.create_program(
+                "Workspace IDs",
+                "Validate stable IDs for new workspace records.",
+            )
+
+            try:
+                with patch("builtins.input", return_value="Risk description"):
+                    add_risk(program)
+
+                with patch(
+                    "builtins.input",
+                    side_effect=[
+                        "Issue description",
+                        "Issue Owner",
+                        "2026-08-01",
+                        "",
+                    ],
+                ):
+                    add_issue(program)
+
+                with patch("builtins.input", return_value="Decision description"):
+                    add_decision(program)
+
+                with patch("builtins.input", return_value="Action description"):
+                    add_action(program)
+
+                self.assertTrue(program["risks"][0]["risk_id"].startswith("risk-"))
+                self.assertTrue(program["issues"][0]["issue_id"].startswith("issue-"))
+                self.assertTrue(
+                    program["decisions"][0]["decision_id"].startswith("decision-")
+                )
+                self.assertTrue(
+                    program["next_actions"][0]["action_id"].startswith("action-")
+                )
+            finally:
+                memory.DATA_DIR = original_data_dir
+
+    def test_legacy_issue_without_issue_id_can_still_be_closed(self):
+        original_data_dir = memory.DATA_DIR
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            memory.DATA_DIR = Path(temp_dir) / "programs"
+            program = memory.create_program(
+                "Legacy Issue Close",
+                "Validate closing legacy issues.",
+            )
+            program["issues"].append({
+                "description": "Legacy issue without id.",
+                "status": "Open",
+            })
+
+            try:
+                with patch("builtins.input", side_effect=["1", ""]):
+                    close_issue(program)
+
+                self.assertEqual(program["issues"][0]["status"], "Closed")
+                self.assertNotIn("issue_id", program["issues"][0])
+            finally:
+                memory.DATA_DIR = original_data_dir
 
 
 if __name__ == "__main__":

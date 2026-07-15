@@ -1,6 +1,14 @@
 import json
 from pathlib import Path
 
+from schema import (
+    CURRENT_SCHEMA_VERSION,
+    apply_compatibility_defaults,
+    create_program_record,
+    utc_timestamp,
+    validate_program,
+)
+
 DATA_DIR = Path("data/programs")
 
 
@@ -16,22 +24,7 @@ def create_program(program_name, description):
     ensure_data_dir()
 
     program_id = program_name.lower().replace(" ", "-")
-
-    data = {
-        "program_id": program_id,
-        "program_name": program_name,
-        "description": description,
-        "phase": "Program Initiation",
-        "health": "Unknown",
-        "confidence": "Medium",
-        "risks": [],
-        "issues": [],
-        "decisions": [],
-        "next_actions": [],
-        "meeting_history": [],
-        "documents": [],
-        "last_update": None
-    }
+    data = create_program_record(program_id, program_name, description)
 
     with open(program_file(program_id), "w", encoding="utf-8") as file:
         json.dump(data, file, indent=2)
@@ -46,12 +39,27 @@ def load_program(program_id):
         return None
 
     with open(file, "r", encoding="utf-8") as f:
-        return json.load(f)
+        return apply_compatibility_defaults(json.load(f))
 
 
 def save_program(program):
-    with open(program_file(program["program_id"]), "w", encoding="utf-8") as f:
-        json.dump(program, f, indent=2)
+    ensure_data_dir()
+
+    normalized = apply_compatibility_defaults(program)
+    metadata = normalized["metadata"]
+    metadata["created_at"] = metadata.get("created_at") or utc_timestamp()
+    metadata["updated_at"] = utc_timestamp()
+    normalized["schema_version"] = CURRENT_SCHEMA_VERSION
+
+    valid, errors = validate_program(normalized)
+    if not valid:
+        raise ValueError("Invalid program record: " + "; ".join(errors))
+
+    with open(program_file(normalized["program_id"]), "w", encoding="utf-8") as f:
+        json.dump(normalized, f, indent=2)
+
+    program.clear()
+    program.update(normalized)
 
 
 def list_programs():
@@ -61,6 +69,6 @@ def list_programs():
 
     for file in DATA_DIR.glob("*.json"):
         with open(file, "r", encoding="utf-8") as f:
-            programs.append(json.load(f))
+            programs.append(apply_compatibility_defaults(json.load(f)))
 
     return programs
