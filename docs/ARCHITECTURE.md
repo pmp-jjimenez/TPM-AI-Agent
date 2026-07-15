@@ -13,6 +13,7 @@ The current product is a local CLI application backed by Markdown knowledge asse
 | CLI | Presents menu options, captures user input, and prints feedback. |
 | `app/main.py` | Application entry point. Displays product header, version `0.2-dev`, menu options, and delegates routing. |
 | `app/router.py` | Routes menu selections for New Program, Active Program, placeholder modes, and exit behavior. |
+| `app/persona_router.py` | Provides deterministic, rule-based persona routing from structured program context without requiring Gemini or network access. |
 | `app/engine.py` | Runs the New Program analysis flow: loads context, builds prompt, saves prompt, calls Gemini, prints and saves response. |
 | `app/llm.py` | Sends prompt payloads to the Gemini API when `GEMINI_API_KEY` is configured. |
 | `app/memory.py` | Creates, loads, saves, and lists JSON program records under `data/programs/`. |
@@ -85,7 +86,32 @@ The AI model is used in the New Program flow only:
 - The system calls Gemini through `app/llm.py`.
 - The system stores the prompt and response as generated session files.
 
-The AI does not autonomously modify program JSON, close issues, update health, create reports, route expert personas, upload documents, or operate a web interface. Human CLI input currently drives state-changing workspace actions.
+The AI does not autonomously modify program JSON, close issues, update health, create reports, upload documents, or operate a web interface. Human CLI input currently drives state-changing workspace actions.
+
+## Persona Routing Foundation
+
+Sprint 51 introduces `app/persona_router.py` as a deterministic routing layer for the documented expert personas. It selects a `primary_persona` and ordered `supporting_personas` from structured context such as requested mode or workflow, program type, phase, health, risks, issues, next actions, and optional free-text user request.
+
+The routing result is a dictionary with this structure:
+
+- `primary_persona`: canonical machine-readable persona identifier.
+- `supporting_personas`: ordered list of canonical persona identifiers.
+- `reasons`: human-readable explanations of the triggered routing rules.
+- `routing_version`: version string for the routing rules.
+
+Canonical persona identifiers are stable strings:
+
+- `technical_program_manager`
+- `cloud_architect`
+- `incident_commander`
+- `executive_advisor`
+- `delivery_manager`
+- `operations_manager`
+- `change_manager`
+- `security_advisor`
+- `customer_success_advisor`
+
+This layer is intentionally independent of Gemini. It does not call an AI model, create autonomous agents, synthesize council output, mutate program records, or change CLI menu behavior. Deterministic routing comes before multi-agent AI orchestration because the system needs testable persona selection, stable ordering, explainable reasons, and backward-compatible behavior before model calls are composed around those decisions.
 
 ## Current Limitations
 
@@ -98,7 +124,8 @@ The AI does not autonomously modify program JSON, close issues, update health, c
 - No implemented dependency management with `uv`.
 - No implemented SOW upload flow.
 - Major Incident, Executive Review, and Operational Readiness are menu placeholders only.
-- No implemented AI Expert Council routing.
+- Persona routing exists as a pure foundation module, but it is not yet integrated into CLI workflows.
+- No implemented AI Expert Council orchestration.
 - Executive report generation is Markdown-only and relatively simple.
 - Gemini model availability and behavior depend on external API access and a configured `GEMINI_API_KEY`.
 
@@ -109,7 +136,8 @@ Future architecture may include:
 - A web application layer for the Program Workspace.
 - A more robust program data model with validation, versioning, and migration support.
 - A document ingestion service for SOWs and related program artifacts.
-- An expert routing layer that selects personas and produces TPM-synthesized council reviews.
+- Persona routing integration with CLI and workspace flows.
+- An expert orchestration layer that uses deterministic persona routing to produce TPM-synthesized council reviews.
 - A report generation layer for professional PowerPoint, PDF, and executive packages.
 - Docker packaging for consistent local and hosted runtime behavior.
 - Dependency management through `uv`.
