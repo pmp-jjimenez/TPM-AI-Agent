@@ -22,6 +22,9 @@ The current product is a local CLI application backed by Markdown knowledge asse
 | `app/executive.py` | Generates Markdown Executive Status Reports under `reports/executive/`. |
 | `app/context_loader.py` | Loads selected Markdown context files for New Program prompt construction. |
 | `app/prompt_builder.py` | Builds the structured New Program prompt sent to the AI model. |
+| `app/pdf_extractor.py` | Validates local PDF paths and extracts bounded selectable text with metadata; it does not perform OCR. |
+| `app/sow_analysis.py` | Parses and normalizes strict SOW-analysis JSON and maps supported fields into canonical program data without mutating the analysis. |
+| `app/sow_intake.py` | Orchestrates extraction, one Gemini call, validation, one persona-routing calculation, persistence, and the initiation summary. |
 | Markdown knowledge assets | Provide reusable TPM instructions, frameworks, playbooks, templates, personas, and examples. |
 | JSON program persistence | Stores program state locally in `data/programs/*.json`. |
 | Gemini API | Provides AI-generated analysis for the New Program flow. |
@@ -54,14 +57,14 @@ If routing fails unexpectedly at the application boundary, `app/persona_routing.
 ## New Program Flow
 
 1. User selects `Start a New Program`.
-2. `app/router.py` prompts for project description and program name.
-3. `app/memory.py` creates a JSON program record under `data/programs/`.
-4. `app/router.py` calculates and displays persona routing for program initiation.
-5. `app/engine.py` loads core context through `app/context_loader.py`.
-6. `app/prompt_builder.py` builds an AI-ready initial TPM assessment prompt, including optional persona routing context.
-7. `app/engine.py` saves the prompt to `sessions/last_prompt.md`.
-8. `app/llm.py` calls the Gemini API if `GEMINI_API_KEY` is configured.
-9. The AI response is printed and saved to `sessions/last_response.md`.
+2. The user chooses manual description, SOW PDF, or return.
+3. The manual path preserves the existing description/name creation, routing, and initial assessment behavior.
+4. The SOW path validates a user-provided local PDF, extracts bounded selectable text, and constructs a strict-JSON prompt.
+5. `app/llm.py` makes one Gemini call. The response is parsed and normalized in memory.
+6. Supported analysis fields map into a canonical program record. Persona routing is calculated once from the initiation context.
+7. The program is validated and created without replacing an existing file, then the same routing result and a concise initiation summary are displayed.
+
+The SOW path does not write its prompt, raw response, extracted text, or source PDF to `sessions/` or program storage.
 
 ## Active Program Workspace Flow
 
@@ -93,6 +96,8 @@ Current data storage is local filesystem storage:
 - Static operating knowledge: Markdown files under `instructions/`, `knowledge/`, `playbooks/`, `templates/`, `personas/`, `examples/`, and `tests/`.
 
 There is no database, schema migration layer, multi-user storage, authentication, or server-side persistence service in the current implementation.
+
+SOW program records store only suitable canonical fields and the source filename. They do not store the original PDF, its full path, extracted document text, or raw Gemini response. Program creation rejects an existing identifier, and updates use validated atomic replacement.
 
 ## AI Boundary
 
@@ -134,12 +139,12 @@ This layer is intentionally independent of Gemini. It does not call an AI model,
 
 - CLI-only user experience.
 - Local JSON files are the only program persistence mechanism.
-- No formal schema validation or migrations for program records.
-- No automated test suite is currently wired to validate application behavior.
+- No schema migration framework; compatibility defaults provide additive legacy support.
+- Automated coverage uses `unittest`, but there is no separate CI configuration in this repository.
 - No implemented web interface.
 - No implemented Docker runtime.
 - No implemented dependency management with `uv`.
-- No implemented SOW upload flow.
+- SOW intake supports selectable-text local PDFs only; there is no upload service, OCR, password prompt, or persisted analysis artifact.
 - Major Incident, Executive Review, and Operational Readiness are menu placeholders only.
 - Persona routing is integrated at the CLI and New Program prompt boundary, but there is no AI Expert Council orchestration.
 - Executive stakeholders such as sponsors, CIOs, CTOs, VPs, steering committees, finance, legal, and PMO leadership remain a future governance or stakeholder layer and are not implemented as a Stakeholder Council.

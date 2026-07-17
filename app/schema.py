@@ -36,6 +36,7 @@ def create_program_record(program_id, program_name, description, source=DEFAULT_
         "program_id": program_id,
         "program_name": program_name,
         "description": description,
+        "customer": "",
         "phase": DEFAULT_PHASE,
         "health": DEFAULT_HEALTH,
         "confidence": DEFAULT_CONFIDENCE,
@@ -61,6 +62,7 @@ def apply_compatibility_defaults(program):
     normalized.setdefault("program_id", "")
     normalized.setdefault("program_name", "")
     normalized.setdefault("description", "")
+    normalized.setdefault("customer", "")
     normalized.setdefault("phase", DEFAULT_PHASE)
     normalized.setdefault("health", DEFAULT_HEALTH)
     normalized.setdefault("confidence", DEFAULT_CONFIDENCE)
@@ -91,6 +93,9 @@ def validate_program(program):
         value = program.get(field)
         if not isinstance(value, str) or not value.strip():
             errors.append(f"{field} must be a non-empty string")
+
+    if not isinstance(program.get("customer", ""), str):
+        errors.append("customer must be a string")
 
     for field in ("schema_version", "phase", "health", "confidence"):
         value = program.get(field)

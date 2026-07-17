@@ -1,2 +1,2 @@
-# No third-party Python packages are required by the current application code.
-# Imports under app/ use the Python standard library and local modules only.
+# Selectable-text PDF extraction for the local SOW intake flow (no OCR).
+pypdf>=5.0.0,<7.0.0

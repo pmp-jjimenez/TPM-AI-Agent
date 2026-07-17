@@ -2,6 +2,7 @@ from engine import analyze_new_program
 from memory import create_program, list_programs
 from persona_routing import calculate_persona_routing, display_persona_routing
 from workspace import open_workspace
+from sow_intake import SOWIntakeError, create_program_from_sow
 
 
 def route_and_display_personas(
@@ -26,33 +27,7 @@ def route(option):
 
     if option == "1":
 
-        print("\n=== NEW PROGRAM ===\n")
-
-        project = input("Describe your project:\n\n")
-
-        if not project.strip():
-            print("Project description required.")
-            return
-
-        program_name = input("\nProgram Name:\n\n")
-
-        if not program_name.strip():
-            print("Program name required.")
-            return
-
-        program = create_program(program_name, project)
-
-        print("\nProgram created successfully.\n")
-
-        persona_routing = route_and_display_personas(
-            menu_mode="Start New Program",
-            workflow_name="program_initiation",
-            user_request=project,
-            program=program,
-            extra_signals=["new program", "initiation"],
-        )
-
-        analyze_new_program(project, persona_routing=persona_routing)
+        start_new_program()
 
     elif option == "2":
 
@@ -131,3 +106,53 @@ def route(option):
     else:
 
         print("\nInvalid option")
+
+
+def start_new_program():
+    print("\n=== NEW PROGRAM ===\n")
+    print("1. Create from manual description")
+    print("2. Create from SOW PDF")
+    print("3. Return")
+
+    selection = input("\nChoose an option: ").strip()
+    if selection == "3":
+        return
+    if selection == "2":
+        pdf_path = input("\nEnter or paste the local SOW PDF path:\n\n")
+        print("\nExtracting and analyzing the SOW with one Gemini call...")
+        try:
+            create_program_from_sow(pdf_path)
+        except SOWIntakeError as error:
+            print(f"\nSOW intake failed: {error}")
+        return
+    if selection != "1":
+        print("Invalid selection.")
+        return
+
+    project = input("Describe your project:\n\n")
+    if not project.strip():
+        print("Project description required.")
+        return
+
+    program_name = input("\nProgram Name:\n\n")
+    if not program_name.strip():
+        print("Program name required.")
+        return
+
+    try:
+        program = create_program(program_name, project)
+    except (FileExistsError, OSError, ValueError) as error:
+        print(f"\nProgram creation failed: {error}")
+        return
+
+    print("\nProgram created successfully.\n")
+
+    persona_routing = route_and_display_personas(
+        menu_mode="Start New Program",
+        workflow_name="program_initiation",
+        user_request=project,
+        program=program,
+        extra_signals=["new program", "initiation"],
+    )
+
+    analyze_new_program(project, persona_routing=persona_routing)
