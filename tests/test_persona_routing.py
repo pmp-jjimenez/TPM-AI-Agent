@@ -115,7 +115,7 @@ class PersonaRoutingIntegrationTests(unittest.TestCase):
             "next_actions": [],
         }
 
-        with patch("builtins.input", side_effect=["Azure migration", "Cloud Program"]), \
+        with patch("builtins.input", side_effect=["1", "Azure migration", "Cloud Program"]), \
             patch("router.create_program", return_value=program), \
             patch("router.calculate_persona_routing", return_value=(routing, False)) as calculate, \
             patch("router.display_persona_routing") as display, \

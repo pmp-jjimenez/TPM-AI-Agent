@@ -65,6 +65,39 @@ class PersonaRouterTests(unittest.TestCase):
             [TECHNICAL_PROGRAM_MANAGER, OPERATIONS_MANAGER],
         )
 
+    def test_sow_program_incident_escalation_and_sla_keeps_tpm_primary(self):
+        result = route_personas(
+            {
+                "risks": ["Incident escalation procedures must meet the SLA."],
+            },
+            requested_mode="Start New Program",
+            workflow="sow_program_initiation",
+            user_request="Support scope includes outage escalation responsibilities.",
+        )
+
+        self.assertEqual(result["primary_persona"], TECHNICAL_PROGRAM_MANAGER)
+
+    def test_sow_cloud_program_keeps_cloud_architect_supporting(self):
+        result = route_personas(
+            {
+                "description": "Cloud architecture implementation on Azure.",
+                "risks": ["Incident escalation must comply with the SLA."],
+            },
+            requested_mode="Start New Program",
+            workflow="sow_program_initiation",
+        )
+
+        self.assertEqual(result["primary_persona"], TECHNICAL_PROGRAM_MANAGER)
+        self.assertEqual(result["supporting_personas"], [CLOUD_ARCHITECT])
+
+    def test_explicit_major_incident_workflow_still_uses_incident_commander(self):
+        result = route_personas(
+            requested_mode="Major Incident",
+            workflow="major_incident",
+        )
+
+        self.assertEqual(result["primary_persona"], INCIDENT_COMMANDER)
+
     def test_executive_review_routing_uses_executive_advisor(self):
         result = route_personas(
             {"health": "Yellow"},

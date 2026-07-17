@@ -68,6 +68,16 @@ INCIDENT_TERMS = (
     "p1",
 )
 
+ACTIVE_INCIDENT_TERMS = (
+    "active incident",
+    "active outage",
+    "current outage",
+    "current production disruption",
+    "production is down",
+    "severity event",
+    "war room",
+)
+
 EXECUTIVE_TERMS = (
     "executive review",
     "executive reporting",
@@ -155,6 +165,12 @@ def route_personas(program_context=None, requested_mode=None, workflow=None, use
     new_program = _contains_any(text, NEW_PROGRAM_TERMS)
     cloud = _contains_any(text, CLOUD_TERMS)
     incident = _contains_any(text, INCIDENT_TERMS)
+    sow_program_initiation = (
+        str(requested_mode or "").lower() == "start new program"
+        and str(workflow or "").lower() == "sow_program_initiation"
+    )
+    if sow_program_initiation:
+        incident = _contains_any(str(user_request or "").lower(), ACTIVE_INCIDENT_TERMS)
     executive = _contains_any(text, EXECUTIVE_TERMS)
     readiness = _contains_any(text, READINESS_TERMS)
     security = _contains_any(text, SECURITY_TERMS)

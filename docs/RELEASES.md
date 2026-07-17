@@ -205,4 +205,28 @@ Known limitations:
 
 Recommended next step:
 
-- Sprint 53 should add a real workflow-level execution boundary for the next highest-value mode, likely Operational Readiness or Major Incident, and reuse the same route-once routing pattern when prompt generation is introduced there.
+- Sprint 53 should add the next highest-value workflow while reusing the route-once routing pattern.
+
+## Sprint 53: SOW Intake Foundation v1
+
+Implemented:
+
+- Added a New Program submenu that preserves manual creation and adds local SOW PDF intake.
+- Added case-insensitive PDF path validation, home expansion, selectable-text extraction metadata, a 120,000-character safety bound, and clear encrypted, malformed, empty, and image-only errors.
+- Added one maintained dependency, `pypdf`, solely for PDF text extraction; OCR is not included.
+- Added a dedicated factual SOW extraction prompt that requests strict JSON and prohibits fabrication, chain-of-thought exposure, autonomous-agent claims, and additional model calls.
+- Added controlled JSON fence removal, parsing, type validation, optional-field normalization, and unusable-response rejection.
+- Added non-mutating mapping to canonical program records, including customer, objective, initiation defaults, confidence, stable-ID risks, stable-ID next actions, and source filename only.
+- Added create-without-overwrite behavior and atomic validated program updates.
+- Reused the deterministic persona router once and displayed the same routing result with a concise initiation summary.
+- Added isolated `unittest` coverage with synthetic text, mocked PDF readers, mocked Gemini responses, and temporary program directories.
+
+Privacy and scope boundaries:
+
+- No SOW PDF, full source path, extracted text, prompt, or raw Gemini response is persisted by the SOW flow.
+- No real Gemini call occurs in tests.
+- No OCR, database, web UI, dashboard, PowerPoint generation, or multi-agent orchestration is included.
+
+Recommended next step:
+
+- Sprint 54: Project Initiation Artifacts generated from reviewed structured analysis, beginning with an Internal Technical Kickoff and Project Charter.
