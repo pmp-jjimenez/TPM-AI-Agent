@@ -1,6 +1,74 @@
 # TPM Operating System Architecture
 
-This document describes the current repository architecture first. Future architecture considerations are listed separately and should not be interpreted as implemented behavior.
+This document distinguishes the current repository architecture from future product boundaries. Future components should not be interpreted as implemented behavior.
+
+## Product Architecture
+
+TPM Operating System is evolving from a local Python CLI into a production-grade SaaS product through incremental, backward-compatible changes. The repository establishes five durable top-level boundaries:
+
+| Boundary | Responsibility |
+|---|---|
+| `backend/` | Backend ownership boundary. During this foundation sprint, the working Python implementation remains in `app/` to preserve imports and CLI behavior. |
+| `frontend/` | Placeholder for a future React + TypeScript user interface. No frontend runtime exists yet. |
+| `shared/` | Placeholder for versioned, implementation-neutral contracts such as schemas and generated models. |
+| `docs/` | Product, architecture, operating-model, and engineering documentation. |
+| `scripts/` | Repository development, validation, and future operational utilities. |
+
+The intended component relationships are:
+
+```mermaid
+flowchart LR
+    User[TPM user]
+    CLI[Current Python CLI]
+    Web[Future React + TypeScript frontend]
+    API[Future API layer]
+    Services[Backend application services]
+    AI[AI engine]
+    Reports[Reporting engine]
+    Store[(Future durable store)]
+    Files[(Current JSON and Markdown files)]
+    Contracts[Shared versioned contracts]
+
+    User --> CLI
+    User -. future .-> Web
+    CLI --> Services
+    Web -. future .-> API
+    API -. future .-> Services
+    Services --> AI
+    Services --> Reports
+    Services --> Files
+    Services -. future .-> Store
+    Contracts -. future .-> API
+    Contracts -. future .-> Web
+```
+
+Solid lines describe current conceptual relationships; dotted lines are future boundaries and are not implemented.
+
+## Boundary Responsibilities
+
+### Backend
+
+The backend owns program domain behavior, workflow orchestration, validation, persistence coordination, AI integration, persona routing, and report generation. Today those responsibilities are implemented by the existing modules under `app/`. They remain in place because moving them would risk direct imports and the current CLI entry point. The new `backend/` directory records the intended ownership boundary without adding a second implementation.
+
+### Frontend
+
+The future frontend will own browser interaction, accessible presentation, client-side navigation, and view-specific state. It will consume versioned API contracts and must not duplicate backend business rules, prompts, persistence behavior, or AI orchestration. No React or TypeScript application is generated in this sprint.
+
+### Shared Modules
+
+The future shared boundary will hold stable, versioned contracts that genuinely cross process or language boundaries: API request and response schemas, event contracts, and generated model definitions. It will not become a general-purpose utility directory or contain backend business logic. The schema technology and code-generation approach remain undecided.
+
+### Future API Layer
+
+A future API layer will provide authenticated, authorized, tenant-aware access to backend application services. It should translate transport contracts to domain inputs, validate requests, apply access controls, and return stable versioned responses. It must wrap existing behavior rather than reimplement it. No FastAPI server, HTTP routes, authentication, or transport models exist today.
+
+### Reporting Engine
+
+The reporting engine owns transformation of validated program state into audience-specific artifacts. The current implementation is `app/executive.py`, which generates Markdown executive status reports. Future work may add PDF, presentation, scheduled, or template-driven output behind a stable backend interface while preserving deterministic inputs and auditable generated artifacts.
+
+### AI Engine
+
+The AI engine owns model-provider interaction and prompt execution boundaries. Today `app/llm.py`, `app/context_loader.py`, `app/prompt_builder.py`, and the relevant orchestration modules implement this capability using existing Markdown instructions and optional Gemini calls. Prompts and AI behavior remain unchanged in this sprint. Future provider abstraction, evaluation, observability, and safety controls should be added around—not silently alter—the established prompt contracts.
 
 ## Current Architecture
 

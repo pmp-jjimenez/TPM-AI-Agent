@@ -11,6 +11,16 @@ This document describes the repository as it exists today.
 ├── QUICKSTART.md
 ├── README.md
 ├── START HERE.md
+├── backend/
+│   └── README.md
+├── frontend/
+│   └── README.md
+├── shared/
+│   ├── README.md
+│   ├── models/
+│   │   └── README.md
+│   └── schemas/
+│       └── README.md
 ├── app/
 │   ├── context_loader.py
 │   ├── engine.py
@@ -103,6 +113,18 @@ This document describes the repository as it exists today.
 macOS `.DS_Store` files may also exist locally. They are not part of the application design.
 
 ## Top-Level Directories
+
+### `backend/`
+
+Backend architecture boundary. The current Python implementation remains under `app/` to preserve imports, tests, and CLI behavior; `backend/` contains foundation documentation only in this sprint.
+
+### `frontend/`
+
+Reserved for a future React + TypeScript application. It contains documentation only and has no generated application or dependencies.
+
+### `shared/`
+
+Reserved for future versioned schemas and cross-boundary model contracts. Its current subdirectories are documentation placeholders only.
 
 ### `app/`
 
