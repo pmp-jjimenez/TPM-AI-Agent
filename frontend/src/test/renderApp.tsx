@@ -16,7 +16,7 @@ export function renderApp(initialPath = '/') {
   return render(
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <MemoryRouter initialEntries={[initialPath]}>
+      <MemoryRouter initialEntries={[initialPath]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <LocationObserver />
         <Routes>
           <Route path="/" element={<AppShell />}>

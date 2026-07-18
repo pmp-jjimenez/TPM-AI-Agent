@@ -32,7 +32,7 @@ flowchart LR
     User --> CLI
     User --> Web
     CLI --> Services
-    Web -. integration pending .-> API
+    Web -->|GET program data| API
     API --> Services
     Services --> AI
     Services --> Reports
@@ -42,7 +42,7 @@ flowchart LR
     Contracts -. future .-> Web
 ```
 
-Solid lines describe current conceptual relationships. The dotted frontend-to-API line indicates that the API exists but frontend integration remains pending.
+Solid lines describe current conceptual relationships. The React frontend calls the FastAPI read-only interface, which delegates program reads to the existing application persistence boundary.
 
 ## Boundary Responsibilities
 
@@ -52,7 +52,7 @@ The backend owns program domain behavior, workflow orchestration, validation, pe
 
 ### Frontend
 
-The frontend owns browser interaction, accessible presentation, client-side navigation, and view-specific state. It provides the application shell and honest integration-pending program views. It does not yet call a backend API and must not duplicate backend business rules, prompts, persistence behavior, or AI orchestration.
+The frontend owns browser interaction, accessible presentation, client-side navigation, and view-specific state. It retrieves program lists and individual workspaces from the API configured by `VITE_API_BASE_URL`. A centralized Fetch client handles GET URLs, JSON responses, cancellation, and transport errors. The frontend does not duplicate backend business rules, prompts, persistence behavior, or AI orchestration.
 
 ### Shared Modules
 
@@ -184,6 +184,16 @@ The API must currently be started from the repository root because `app/memory.p
 5. Persistence reads and normalizes the existing JSON record without changing it.
 6. The router returns that dictionary or a structured `404`/`500` error.
 
+## Browser Program Flow
+
+1. Start the backend from the repository root with `python3 -m uvicorn backend.api.main:app --host 127.0.0.1 --port 8000`; it is available at `http://127.0.0.1:8000`.
+2. Start the browser application from `frontend/` with `VITE_API_BASE_URL=http://127.0.0.1:8000 npm run dev`; Vite normally serves `http://localhost:5173`.
+3. `/programs` requests `GET /programs`, defensively filters entries without usable identifiers, sorts a copied list by program name, and renders only API-provided metadata.
+4. Selecting a program navigates to an encoded `/programs/{programId}` route. The workspace requests the matching API resource and never treats an unmatched route parameter as loaded program data.
+5. Requests are cancelled when their page unmounts. Network and server failures show safe retry actions, malformed payloads show a generic production error, and a workspace 404 shows a return-to-Programs action. Backend error text is retained by the transport layer but is not rendered without filtering.
+
+`VITE_API_BASE_URL` is the frontend's only API configuration source and must be an absolute HTTP or HTTPS URL. The API remains read-only and has no authentication or authorization. `GET /programs` currently returns full records rather than summaries, so list payload growth is a known limitation.
+
 The CLI continues to run with `python3 app/main.py` and uses the same persistence functions directly. Adding the API does not change CLI commands, menus, or execution paths.
 
 SOW program records store only suitable canonical fields and the source filename. They do not store the original PDF, its full path, extracted document text, or raw Gemini response. Program creation rejects an existing identifier, and updates use validated atomic replacement.
@@ -226,11 +236,11 @@ This layer is intentionally independent of Gemini. It does not call an AI model,
 
 ## Current Limitations
 
-- The CLI remains the primary interface; frontend-to-API integration is pending.
+- The browser supports read-only program browsing and workspace views; the CLI remains the interface for mutations.
 - Local JSON files are the only program persistence mechanism.
 - No schema migration framework; compatibility defaults provide additive legacy support.
 - Automated coverage uses `unittest`, but there is no separate CI configuration in this repository.
-- The web interface provides a routed application foundation, but it does not yet call the available backend API.
+- The web interface calls the available read-only backend API but does not provide mutations.
 - No implemented Docker runtime.
 - No implemented dependency management with `uv`.
 - SOW intake supports selectable-text local PDFs only; there is no upload service, OCR, password prompt, or persisted analysis artifact.
