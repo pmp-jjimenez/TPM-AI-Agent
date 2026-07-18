@@ -12,6 +12,14 @@ This document describes the repository as it exists today.
 ├── README.md
 ├── START HERE.md
 ├── backend/
+│   ├── api/
+│   │   ├── main.py
+│   │   ├── compat.py
+│   │   ├── dependencies.py
+│   │   ├── errors.py
+│   │   └── routers/
+│   │       ├── health.py
+│   │       └── programs.py
 │   └── README.md
 ├── frontend/
 │   ├── src/
@@ -31,6 +39,7 @@ This document describes the repository as it exists today.
 │       └── README.md
 ├── app/
 │   ├── context_loader.py
+│   ├── application_version.py
 │   ├── engine.py
 │   ├── executive.py
 │   ├── llm.py
@@ -124,11 +133,11 @@ macOS `.DS_Store` files may also exist locally. They are not part of the applica
 
 ### `backend/`
 
-Backend architecture boundary. The current Python implementation remains under `app/` to preserve imports, tests, and CLI behavior; `backend/` contains foundation documentation only in this sprint.
+Backend architecture boundary. The read-only FastAPI application lives under `backend/api/`, while existing domain and persistence implementation remains under `app/` to preserve imports, tests, and CLI behavior. The API reuses `app/memory.py` through a thin adapter.
 
 ### `frontend/`
 
-React + TypeScript web application built with Vite, Material UI, and React Router. It provides the responsive application shell and Programs routes. It contains no API client or mock program data because backend integration is not yet implemented.
+React + TypeScript web application built with Vite, Material UI, and React Router. It provides the responsive application shell and Programs routes. It does not yet call the backend API and contains no mock program data.
 
 ### `shared/`
 
@@ -191,6 +200,10 @@ Markdown-based scenarios and expected outputs. These are reference test assets; 
 ### `app/main.py`
 
 CLI entry point. It prints the product header, version, and menu options, collects the selected option, and delegates routing to `router.route`.
+
+### `app/application_version.py`
+
+Single application-version constant used by the CLI banner and API health response.
 
 ### `app/router.py`
 

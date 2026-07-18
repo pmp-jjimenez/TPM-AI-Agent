@@ -1,2 +1,6 @@
 # Selectable-text PDF extraction for the local SOW intake flow (no OCR).
 pypdf>=5.0.0,<7.0.0
+# REST API runtime and in-process API test client.
+fastapi==0.115.12
+uvicorn==0.34.2
+httpx==0.28.1

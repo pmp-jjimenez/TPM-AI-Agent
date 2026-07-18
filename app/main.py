@@ -1,6 +1,9 @@
+from application_version import APPLICATION_VERSION
+
+
 def main():
     print("TPM OPERATING SYSTEM")
-    print("Version: 0.2-dev")
+    print(f"Version: {APPLICATION_VERSION}")
     print("Program Intelligence for Technical Program Managers")
 
     print("\nSelect an option:\n")

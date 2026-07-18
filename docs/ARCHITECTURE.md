@@ -21,7 +21,7 @@ flowchart LR
     User[TPM user]
     CLI[Current Python CLI]
     Web[React + TypeScript frontend]
-    API[Future API layer]
+    API[FastAPI read-only API]
     Services[Backend application services]
     AI[AI engine]
     Reports[Reporting engine]
@@ -32,8 +32,8 @@ flowchart LR
     User --> CLI
     User --> Web
     CLI --> Services
-    Web -. future .-> API
-    API -. future .-> Services
+    Web -. integration pending .-> API
+    API --> Services
     Services --> AI
     Services --> Reports
     Services --> Files
@@ -42,13 +42,13 @@ flowchart LR
     Contracts -. future .-> Web
 ```
 
-Solid lines describe current conceptual relationships; dotted lines are future boundaries and are not implemented.
+Solid lines describe current conceptual relationships. The dotted frontend-to-API line indicates that the API exists but frontend integration remains pending.
 
 ## Boundary Responsibilities
 
 ### Backend
 
-The backend owns program domain behavior, workflow orchestration, validation, persistence coordination, AI integration, persona routing, and report generation. Today those responsibilities are implemented by the existing modules under `app/`. They remain in place because moving them would risk direct imports and the current CLI entry point. The new `backend/` directory records the intended ownership boundary without adding a second implementation.
+The backend owns program domain behavior, workflow orchestration, validation, persistence coordination, AI integration, persona routing, report generation, and HTTP transport. Domain and persistence responsibilities remain implemented by the existing modules under `app/` because moving them would risk direct imports and the current CLI entry point. The read-only FastAPI transport under `backend/api/` calls the existing persistence boundary rather than adding a second implementation.
 
 ### Frontend
 
@@ -58,9 +58,13 @@ The frontend owns browser interaction, accessible presentation, client-side navi
 
 The future shared boundary will hold stable, versioned contracts that genuinely cross process or language boundaries: API request and response schemas, event contracts, and generated model definitions. It will not become a general-purpose utility directory or contain backend business logic. The schema technology and code-generation approach remain undecided.
 
-### Future API Layer
+### API Layer
 
-A future API layer will provide authenticated, authorized, tenant-aware access to backend application services. It should translate transport contracts to domain inputs, validate requests, apply access controls, and return stable versioned responses. It must wrap existing behavior rather than reimplement it. No FastAPI server, HTTP routes, authentication, or transport models exist today.
+`backend/api/` is a read-only FastAPI interface. Its routers expose health and program reads, while `dependencies.py` adapts `app/memory.py` for transport use. `compat.py` provides the minimum import bridge needed by the existing script-oriented application modules. It does not duplicate persistence, normalization, schema, or business rules. The CLI and API therefore remain separate interfaces over the same application behavior.
+
+The API returns the flexible normalized dictionaries produced by persistence so legacy-compatible records are not rejected by speculative transport models. Missing programs and persistence failures use a structured JSON error envelope. Unexpected server exceptions are logged, while responses omit stack traces and internal filesystem paths.
+
+FastAPI publishes Swagger UI at `/docs` and OpenAPI JSON at `/openapi.json`. The default CORS allowlist contains the two Vite development origins on port 5173; `TPM_API_CORS_ORIGINS` adds comma-separated origins, and credentials remain disabled. Authentication, authorization, tenant isolation, mutations, search, filtering, sorting, and pagination are not implemented.
 
 ### Reporting Engine
 
@@ -79,7 +83,11 @@ The current product is a local CLI application backed by Markdown knowledge asse
 | Component | Current Responsibility |
 |---|---|
 | CLI | Presents menu options, captures user input, and prints feedback. |
+| `backend/api/main.py` | Creates the FastAPI application, registers routes and structured error handling, and configures CORS. |
+| `backend/api/dependencies.py` | Provides a thin read-only adapter over the existing program persistence service. |
+| `backend/api/routers/` | Exposes health and program-read HTTP endpoints. |
 | `app/main.py` | Application entry point. Displays product header, version `0.2-dev`, menu options, and delegates routing. |
+| `app/application_version.py` | Holds the application version shared by the unchanged CLI banner and API health metadata. |
 | `app/router.py` | Routes menu selections for New Program, Active Program, placeholder modes, and exit behavior. |
 | `app/persona_router.py` | Provides deterministic, rule-based persona routing from structured program context without requiring Gemini or network access. |
 | `app/persona_routing.py` | Application integration boundary for persona routing. It builds non-mutating routing context, calls the router once per CLI operation, handles safe fallback, resolves persona display names, and renders concise CLI output. |
@@ -165,6 +173,19 @@ Current data storage is local filesystem storage:
 
 There is no database, schema migration layer, multi-user storage, authentication, or server-side persistence service in the current implementation.
 
+The API must currently be started from the repository root because `app/memory.py` resolves `data/programs/` relative to the process working directory. API reads reuse that behavior, including directory creation during listing. Atomic file replacement reduces partial reads during normal application writes, but filesystem persistence has no cross-process locking or transaction isolation. Concurrent CLI/API access, malformed JSON, permissions failures, or external file changes can therefore produce read failures.
+
+## REST API Flow
+
+1. Start the API from the repository root with `python3 -m uvicorn backend.api.main:app --host 127.0.0.1 --port 8000`.
+2. FastAPI routes `GET /health`, `GET /programs`, and `GET /programs/{programId}`.
+3. Program routers resolve the read-only dependency adapter.
+4. The adapter calls `list_programs()` or `load_program()` in `app/memory.py`.
+5. Persistence reads and normalizes the existing JSON record without changing it.
+6. The router returns that dictionary or a structured `404`/`500` error.
+
+The CLI continues to run with `python3 app/main.py` and uses the same persistence functions directly. Adding the API does not change CLI commands, menus, or execution paths.
+
 SOW program records store only suitable canonical fields and the source filename. They do not store the original PDF, its full path, extracted document text, or raw Gemini response. Program creation rejects an existing identifier, and updates use validated atomic replacement.
 
 ## AI Boundary
@@ -205,11 +226,11 @@ This layer is intentionally independent of Gemini. It does not call an AI model,
 
 ## Current Limitations
 
-- CLI-only user experience.
+- The CLI remains the primary interface; frontend-to-API integration is pending.
 - Local JSON files are the only program persistence mechanism.
 - No schema migration framework; compatibility defaults provide additive legacy support.
 - Automated coverage uses `unittest`, but there is no separate CI configuration in this repository.
-- The web interface provides a routed application foundation, but program data remains unavailable until backend integration.
+- The web interface provides a routed application foundation, but it does not yet call the available backend API.
 - No implemented Docker runtime.
 - No implemented dependency management with `uv`.
 - SOW intake supports selectable-text local PDFs only; there is no upload service, OCR, password prompt, or persisted analysis artifact.
