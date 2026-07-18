@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from backend.api.compat import APPLICATION_VERSION, memory
-from backend.api.dependencies import get_program_reader
+from backend.api.dependencies import get_intelligence_service, get_program_reader
 from backend.api.main import app
 
 
@@ -36,6 +36,32 @@ CONTROLLED_PROGRAM = {
 class FailingProgramReader:
     def list_programs(self):
         raise OSError("private test persistence path")
+
+
+class ControlledIntelligenceService:
+    def generate(self, program):
+        return {
+            "program_id": program["program_id"],
+            "generated_at": "2026-07-17T12:00:00+00:00",
+            "source": "ai",
+            "routing": {
+                "version": "1.0.0",
+                "primary_persona": {"id": "technical_program_manager", "display_name": "Technical Program Manager"},
+                "supporting_personas": [{"id": "delivery_manager", "display_name": "Delivery Manager"}],
+            },
+            "summary": "Controlled intelligence",
+            "attention_items": [],
+            "risks": [],
+            "missing_information": [],
+            "recommended_actions": [],
+            "confidence": "High",
+            "limitations": [],
+        }
+
+
+class FailingIntelligenceService:
+    def generate(self, _program):
+        raise RuntimeError("private provider response and filesystem path")
 
     def load_program(self, _program_id):
         raise OSError("private test persistence path")
@@ -90,6 +116,34 @@ class APITests(unittest.TestCase):
             },
         )
 
+    def test_intelligence_endpoint_uses_injected_service_and_explicit_contract(self):
+        app.dependency_overrides[get_intelligence_service] = lambda: ControlledIntelligenceService()
+        response = self.client.get("/programs/controlled-program/intelligence")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["source"], "ai")
+        self.assertEqual(response.json()["summary"], "Controlled intelligence")
+        self.assertNotIn("reasons", response.json()["routing"])
+
+    def test_missing_program_intelligence_returns_structured_404(self):
+        app.dependency_overrides[get_intelligence_service] = lambda: ControlledIntelligenceService()
+        response = self.client.get("/programs/unknown-program/intelligence")
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json()["error"]["code"], "program_not_found")
+
+    def test_unexpected_intelligence_failure_is_sanitized(self):
+        app.dependency_overrides[get_intelligence_service] = lambda: FailingIntelligenceService()
+        response = self.client.get("/programs/controlled-program/intelligence")
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json(), {
+            "error": {
+                "code": "intelligence_generation_error",
+                "message": "Workspace intelligence could not be generated.",
+            }
+        })
+        self.assertNotIn("private provider", response.text)
+        self.assertNotIn("filesystem", response.text)
+
     def test_persistence_failure_returns_structured_500_without_details(self):
         app.dependency_overrides[get_program_reader] = lambda: FailingProgramReader()
 
@@ -131,6 +185,7 @@ class APITests(unittest.TestCase):
         self.assertIn("/health", paths)
         self.assertIn("/programs", paths)
         self.assertIn("/programs/{programId}", paths)
+        self.assertIn("/programs/{programId}/intelligence", paths)
         self.assertEqual(set(paths["/health"]), {"get"})
         self.assertEqual(set(paths["/programs"]), {"get"})
         self.assertEqual(set(paths["/programs/{programId}"]), {"get"})

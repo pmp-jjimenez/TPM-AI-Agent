@@ -2,6 +2,16 @@
 
 This release history is based on the actual Git history available in the repository. Some commits do not carry explicit sprint numbers. Where exact sprint mapping is uncertain, that uncertainty is stated rather than inferred.
 
+## Workspace Intelligence Integration — US-55.5
+
+Implemented a read-only, explicitly generated intelligence area in the Executive
+Program Workspace. FastAPI delegates to a permanent application service that reuses
+existing context, prompt construction, persona routing, Gemini configuration, and
+grounded deterministic rules. Strict bounded JSON parsing uses all-or-fallback
+behavior. Provider failures return visibly labeled fallback intelligence; generated
+results are not persisted. CLI and SOW behavior and stored workspace sections remain
+compatible.
+
 ## Initial MVP
 
 Git commit: `ee26c59` - `MVP v0.1 - AI-powered TPM Operating System`

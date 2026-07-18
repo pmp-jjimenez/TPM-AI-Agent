@@ -31,9 +31,39 @@ Implemented endpoints are:
 - `GET /health`
 - `GET /programs`
 - `GET /programs/{programId}`
+- `GET /programs/{programId}/intelligence`
 
 The API is intentionally read-only. It does not provide authentication,
 authorization, program mutations, search, filtering, sorting, or pagination.
+
+## Workspace intelligence
+
+`GET /programs/{programId}/intelligence` is an explicitly user-triggered,
+read-only endpoint. The flow is React → FastAPI → `app/intelligence.py` → the
+existing context and prompt builder → existing persona routing → the configured
+Gemini boundary. FastAPI never calls CLI input/output code.
+
+Gemini reuses `GEMINI_API_KEY` and the existing model convention. The standard
+library HTTP boundary has a 20-second timeout, makes one request, and does not
+retry. Configuration, timeout, transport/provider, empty-output, provider-shape,
+and intelligence-JSON failures return HTTP 200 with `source:
+deterministic_fallback`. Persistence and unexpected failures use sanitized errors.
+
+AI output must be an exact strict-JSON object. Summary is limited to 2,000
+characters; each list accepts at most 20 non-empty strings of 500 characters.
+Confidence must be `High`, `Medium`, or `Low`, otherwise the whole AI result is
+discarded. Fallback uses only stored facts, risks and issues, the six established
+executive completeness fields, and existing Program Initiation recommendations.
+
+Intelligence is generated in memory. It does not update program JSON, sessions, or
+artifacts. Responses exclude prompts, provider payloads, credentials, routing
+reasons, hidden reasoning, stack traces, and filesystem paths.
+
+Manual fallback check (start the API without `GEMINI_API_KEY`):
+
+```bash
+curl http://127.0.0.1:8000/programs/microsoft-teams-latam/intelligence
+```
 
 ## CORS
 

@@ -10,6 +10,7 @@ if str(APP_DIR) not in sys.path:
 
 from application_version import APPLICATION_VERSION  # noqa: E402
 import memory  # noqa: E402
+from intelligence import WorkspaceIntelligenceService  # noqa: E402
 
 
-__all__ = ["APPLICATION_VERSION", "memory"]
+__all__ = ["APPLICATION_VERSION", "WorkspaceIntelligenceService", "memory"]

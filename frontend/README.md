@@ -23,7 +23,7 @@ From the repository root, start the backend API. The working directory is requir
 python3 -m uvicorn backend.api.main:app --host 127.0.0.1 --port 8000
 ```
 
-The API is then available at `http://127.0.0.1:8000`. Its current scope is read-only: `GET /health`, `GET /programs`, and `GET /programs/{programId}`. Authentication and authorization are not implemented.
+The API is then available at `http://127.0.0.1:8000`. Its current scope is read-only: `GET /health`, `GET /programs`, `GET /programs/{programId}`, and `GET /programs/{programId}/intelligence`. Authentication and authorization are not implemented.
 
 In a second terminal, start the frontend with the required API base URL:
 
@@ -79,7 +79,15 @@ The workspace keeps stored facts separate from deterministic recommendations:
 - Missing Information checks the explicit sponsor, budget, target go-live, architecture, dependencies, and governance values. Only absent, null, empty, or unusable values are listed. The literal value `Unknown` counts as recorded information, and completeness gaps are not presented as risks or issues.
 - Stored `next_actions` are shown separately from workspace recommendations. Legacy strings and supported object shapes are parsed defensively. The workspace recommends `Internal Technical Kickoff` only for the exact `Program Initiation` phase and recommends collecting the specifically missing completeness fields.
 
-These rules run entirely in the browser over the existing API response. They do not call an AI model, persist recommendations, create actions, or modify program data.
+The former browser completeness and phase-recommendation rules now run in the backend intelligence service, preventing frontend/backend rule drift. Stored program actions remain a separate persisted-fact section.
+
+## Workspace intelligence
+
+Intelligence is not fetched when a workspace opens. The user chooses **Generate Intelligence** and may later choose **Refresh Intelligence**. Only one request can be active, there are no automatic retries or polling, and navigation or unmount cancels the request and guards against stale responses.
+
+Results identify `AI` or `Deterministic Fallback`, contributing personas, summary, attention items, risks, missing information, recommended actions, confidence, limitations, and generation time. Empty collections have grounded empty states. Results are explicitly read-only and non-persisted. Transport/server failure leaves stored workspace facts visible and offers a retry without displaying raw errors.
+
+For manual testing, open `/programs/microsoft-teams-latam`, confirm no intelligence request occurs on load, and select **Generate Intelligence**. Start the backend without `GEMINI_API_KEY` to verify fallback. Configure the existing variable only for an authorized provider check.
 
 The workspace uses wrapping metadata grids and breakpoint-aware cards. Status cards, overview metadata, next-step columns, and other multi-column content collapse to a single column on narrow screens without changing the existing responsive sidebar behavior.
 
@@ -89,4 +97,5 @@ The workspace uses wrapping metadata grids and breakpoint-aware cards. Status ca
 - The API contract intentionally remains flexible and persistence may apply compatibility defaults before returning records.
 - The frontend is read-only and has no authentication, editing, search, filtering, or pagination.
 - Milestones and executive completeness fields are not part of the canonical Program Data Foundation v1 schema. They appear only when explicitly present in an API record; consequently, current records commonly show an empty timeline and completeness gaps.
-- Workspace recommendations are limited to local deterministic rules. There is no AI-generated workspace summary, prioritization, or next-best-action intelligence.
+- Intelligence is session-only: refresh invokes generation again and page reload loses the result.
+- There is no streaming, polling, caching, intelligence persistence, prompt editing, or provider-selection UI.

@@ -2,7 +2,7 @@
 
 from typing import Any, Dict, List, Optional
 
-from backend.api.compat import memory
+from backend.api.compat import WorkspaceIntelligenceService, memory
 
 
 class ProgramReader:
@@ -20,3 +20,10 @@ _program_reader = ProgramReader()
 
 def get_program_reader() -> ProgramReader:
     return _program_reader
+
+
+_intelligence_service = WorkspaceIntelligenceService()
+
+
+def get_intelligence_service() -> WorkspaceIntelligenceService:
+    return _intelligence_service

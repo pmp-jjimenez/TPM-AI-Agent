@@ -13,6 +13,24 @@ const alpha = {
   metadata: { created_at: '2026-06-01T00:00:00Z', updated_at: '2026-07-17T00:00:00Z', source: 'test' },
 };
 
+const aiIntelligence = {
+  program_id: 'alpha-program',
+  generated_at: '2026-07-17T12:00:00Z',
+  source: 'ai',
+  routing: {
+    version: '1.0.0',
+    primary_persona: { id: 'technical_program_manager', display_name: 'Technical Program Manager' },
+    supporting_personas: [{ id: 'delivery_manager', display_name: 'Delivery Manager' }],
+  },
+  summary: 'Grounded AI intelligence summary.',
+  attention_items: [],
+  risks: ['Stored delivery risk'],
+  missing_information: [],
+  recommended_actions: ['Review delivery plan'],
+  confidence: 'High',
+  limitations: [],
+};
+
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
@@ -108,34 +126,78 @@ describe('Program workspace', () => {
     expect(screen.getByText('No stored program actions are available.')).toBeInTheDocument();
   });
 
-  it('keeps Unknown as a real status value and detects only absent completeness fields', async () => {
-    mockFetchOnce({
-      ...alpha,
-      health: 'Unknown',
-      sponsor: 'Unknown',
-      budget: 0,
-      target_go_live: 'Unknown',
-      architecture: { summary: 'Unknown' },
-      dependencies: ['Unknown'],
-      governance: 'Unknown',
-    });
+  it('shows a not-generated state and makes no intelligence request on workspace load', async () => {
+    const fetchSpy = mockFetchOnce(alpha);
     renderApp('/programs/alpha-program');
 
-    expect(await screen.findAllByText('Unknown')).toHaveLength(2);
-    expect(screen.getByText('All executive completeness fields are recorded.')).toBeInTheDocument();
-    expect(screen.queryByText('Collect executive program information')).not.toBeInTheDocument();
+    expect(await screen.findByText('Intelligence has not been generated for this workspace session.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Generate Intelligence' })).toBeEnabled();
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('shows missing executive information and deterministic Program Initiation recommendations', async () => {
-    mockFetchOnce({ ...alpha, phase: 'Program Initiation' });
+  it('generates AI intelligence once, displays personas and grounded sections, then allows refresh', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse(alpha))
+      .mockResolvedValueOnce(jsonResponse(aiIntelligence))
+      .mockResolvedValueOnce(jsonResponse({ ...aiIntelligence, summary: 'Refreshed intelligence.' }));
     renderApp('/programs/alpha-program');
 
-    expect(await screen.findByText('These details are not recorded. They are not risks or issues.')).toBeInTheDocument();
-    for (const field of ['Sponsor', 'Budget', 'Target Go-Live', 'Architecture', 'Dependencies', 'Governance']) {
-      expect(screen.getByText(field)).toBeInTheDocument();
-    }
-    expect(screen.getByText('Internal Technical Kickoff')).toBeInTheDocument();
-    expect(screen.getByText('Collect executive program information')).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: 'Generate Intelligence' }));
+    expect(await screen.findByText('Grounded AI intelligence summary.')).toBeInTheDocument();
+    expect(screen.getByText('AI')).toBeInTheDocument();
+    expect(screen.getByText('Technical Program Manager')).toBeInTheDocument();
+    expect(screen.getByText('Delivery Manager')).toBeInTheDocument();
+    expect(screen.getByText('Stored delivery risk')).toBeInTheDocument();
+    expect(screen.getByText('Review delivery plan')).toBeInTheDocument();
+    expect(screen.getByText('No grounded attention items were identified.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh Intelligence' }));
+    expect(await screen.findByText('Refreshed intelligence.')).toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('displays deterministic fallback and limitations distinctly', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse(alpha))
+      .mockResolvedValueOnce(jsonResponse({
+        ...aiIntelligence,
+        source: 'deterministic_fallback',
+        confidence: 'Medium',
+        summary: 'Grounded deterministic summary.',
+        limitations: ['AI generation was unavailable; grounded deterministic intelligence is shown.'],
+      }));
+    renderApp('/programs/alpha-program');
+    fireEvent.click(await screen.findByRole('button', { name: 'Generate Intelligence' }));
+    expect(await screen.findByText('Deterministic Fallback')).toBeInTheDocument();
+    expect(screen.getByText(/AI generation was unavailable/)).toBeInTheDocument();
+  });
+
+  it('prevents duplicate requests while generation is active', async () => {
+    let resolveIntelligence!: (response: Response) => void;
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse(alpha))
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveIntelligence = resolve; }));
+    renderApp('/programs/alpha-program');
+    const button = await screen.findByRole('button', { name: 'Generate Intelligence' });
+    fireEvent.click(button);
+    expect(screen.getByRole('button', { name: 'Generating Intelligence…' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Generating Intelligence…' }));
+    expect(fetch).toHaveBeenCalledTimes(2);
+    resolveIntelligence(jsonResponse(aiIntelligence));
+    expect(await screen.findByText('Grounded AI intelligence summary.')).toBeInTheDocument();
+  });
+
+  it('keeps workspace facts visible on intelligence failure and retries safely', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse(alpha))
+      .mockRejectedValueOnce(new TypeError('private network detail'))
+      .mockResolvedValueOnce(jsonResponse(aiIntelligence));
+    renderApp('/programs/alpha-program');
+    fireEvent.click(await screen.findByRole('button', { name: 'Generate Intelligence' }));
+    expect(await screen.findByText('Intelligence is unavailable')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Alpha Program' })).toBeInTheDocument();
+    expect(screen.queryByText('private network detail')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry Intelligence' }));
+    expect(await screen.findByText('Grounded AI intelligence summary.')).toBeInTheDocument();
   });
 
   it('renders explicit milestones and never substitutes meeting history', async () => {
@@ -151,7 +213,7 @@ describe('Program workspace', () => {
     expect(screen.queryByText('Kickoff')).not.toBeInTheDocument();
   });
 
-  it('keeps stored next actions distinct from workspace recommendations and preserves explicit metadata', async () => {
+  it('keeps stored next actions distinct from generated intelligence and preserves explicit metadata', async () => {
     mockFetchOnce({
       ...alpha,
       phase: 'Program Initiation',
@@ -163,10 +225,9 @@ describe('Program workspace', () => {
     });
     renderApp('/programs/alpha-program');
 
-    const storedHeading = await screen.findByRole('heading', { level: 3, name: 'Stored Program Actions' });
-    const recommendationHeading = screen.getByRole('heading', { level: 3, name: 'Workspace Recommendations' });
+    const storedHeading = await screen.findByRole('heading', { level: 2, name: 'Stored Program Actions' });
     expect(storedHeading.compareDocumentPosition(screen.getByText('Confirm rollout cohort')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(recommendationHeading.compareDocumentPosition(screen.getByText('Internal Technical Kickoff')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByText('Internal Technical Kickoff')).not.toBeInTheDocument();
     expect(screen.getByText('Status: Open')).toBeInTheDocument();
     expect(screen.getByText('Owner: Operations')).toBeInTheDocument();
     expect(screen.getByText('Due: 2026-08-01')).toBeInTheDocument();
@@ -205,5 +266,35 @@ describe('Program workspace', () => {
     expect(capturedSignal?.aborted).toBe(false);
     view.unmount();
     expect(capturedSignal?.aborted).toBe(true);
+  });
+
+  it('aborts an active intelligence request on unmount', async () => {
+    let intelligenceSignal: AbortSignal | undefined;
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse(alpha))
+      .mockImplementationOnce((_input, init) => {
+        intelligenceSignal = init?.signal ?? undefined;
+        return new Promise(() => {});
+      });
+    const view = renderApp('/programs/alpha-program');
+    fireEvent.click(await screen.findByRole('button', { name: 'Generate Intelligence' }));
+    expect(intelligenceSignal?.aborted).toBe(false);
+    view.unmount();
+    expect(intelligenceSignal?.aborted).toBe(true);
+  });
+
+  it('ignores an intelligence response that resolves after its workspace is gone', async () => {
+    let resolveStale!: (response: Response) => void;
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse(alpha))
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveStale = resolve; }))
+      .mockResolvedValueOnce(jsonResponse({ ...alpha, program_id: 'beta-program', program_name: 'Beta Program' }));
+    const first = renderApp('/programs/alpha-program');
+    fireEvent.click(await screen.findByRole('button', { name: 'Generate Intelligence' }));
+    first.unmount();
+    renderApp('/programs/beta-program');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Beta Program' })).toBeInTheDocument();
+    resolveStale(jsonResponse(aiIntelligence));
+    await waitFor(() => expect(screen.queryByText('Grounded AI intelligence summary.')).not.toBeInTheDocument());
   });
 });

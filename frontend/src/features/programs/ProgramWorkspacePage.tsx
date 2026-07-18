@@ -1,5 +1,5 @@
-import { Button, Divider, Grid2, Paper, Stack, Typography } from '@mui/material';
-import { useEffect, useState } from 'react';
+import { Box, Button, Divider, Grid2, Paper, Stack, Typography } from '@mui/material';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link as RouterLink, useParams } from 'react-router-dom';
 import { ApiError } from '../../api/client';
@@ -8,41 +8,16 @@ import { LoadingState } from '../../components/feedback/LoadingState';
 import { PageContainer } from '../../components/layout/PageContainer';
 import {
   MetadataGrid,
-  MissingInformationCard,
-  RecommendationCard,
+  IntelligenceResult,
   SectionHeader,
   StatusCard,
 } from './ExecutiveWorkspaceComponents';
-import { getProgram } from './programApi';
-import type { ProgramRecord } from './programTypes';
+import { getProgram, getProgramIntelligence } from './programApi';
+import type { IntelligenceResponse, ProgramRecord } from './programTypes';
 import { usableText } from './programTypes';
 
 interface Milestone { date?: string; title: string; description?: string; status?: string }
 interface StoredAction { description: string; status?: string; owner?: string; dueDate?: string }
-
-const completenessFields = [
-  ['Sponsor', 'sponsor'],
-  ['Budget', 'budget'],
-  ['Target Go-Live', 'target_go_live'],
-  ['Architecture', 'architecture'],
-  ['Dependencies', 'dependencies'],
-  ['Governance', 'governance'],
-] as const;
-
-function hasUsableValue(value: unknown): boolean {
-  if (typeof value === 'string') return Boolean(value.trim());
-  if (typeof value === 'number') return Number.isFinite(value);
-  if (typeof value === 'boolean') return true;
-  if (Array.isArray(value)) return value.some(hasUsableValue);
-  if (value && typeof value === 'object') return Object.values(value).some(hasUsableValue);
-  return false;
-}
-
-function missingInformation(program: ProgramRecord): string[] {
-  return completenessFields
-    .filter(([, field]) => !hasUsableValue(program[field]))
-    .map(([label]) => label);
-}
 
 function milestones(program: ProgramRecord): Milestone[] {
   return (program.milestones ?? []).flatMap((entry) => {
@@ -110,6 +85,11 @@ export function ProgramWorkspacePage() {
   const [program, setProgram] = useState<ProgramRecord | null>(null);
   const [error, setError] = useState<unknown>();
   const [requestVersion, setRequestVersion] = useState(0);
+  const [intelligence, setIntelligence] = useState<IntelligenceResponse | null>(null);
+  const [intelligenceError, setIntelligenceError] = useState(false);
+  const [intelligenceLoading, setIntelligenceLoading] = useState(false);
+  const intelligenceSequence = useRef(0);
+  const intelligenceController = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -127,6 +107,39 @@ export function ProgramWorkspacePage() {
     return () => controller.abort();
   }, [programId, requestVersion]);
 
+  useEffect(() => {
+    intelligenceController.current?.abort();
+    intelligenceSequence.current += 1;
+    setIntelligence(null);
+    setIntelligenceError(false);
+    setIntelligenceLoading(false);
+    return () => {
+      intelligenceController.current?.abort();
+      intelligenceSequence.current += 1;
+    };
+  }, [programId]);
+
+  const generateIntelligence = () => {
+    if (!programId || intelligenceLoading) return;
+    const request = intelligenceSequence.current + 1;
+    intelligenceSequence.current = request;
+    setIntelligenceLoading(true);
+    setIntelligenceError(false);
+    const controller = new AbortController();
+    intelligenceController.current = controller;
+    const activeProgramId = programId;
+    getProgramIntelligence(programId, controller.signal)
+      .then((result) => {
+        if (request === intelligenceSequence.current && activeProgramId === programId) setIntelligence(result);
+      })
+      .catch((requestError) => {
+        if (!(requestError instanceof ApiError && requestError.kind === 'aborted') && request === intelligenceSequence.current && activeProgramId === programId) setIntelligenceError(true);
+      })
+      .finally(() => {
+        if (request === intelligenceSequence.current && activeProgramId === programId) setIntelligenceLoading(false);
+      });
+  };
+
   const retry = <Button variant="outlined" onClick={() => setRequestVersion((value) => value + 1)}>Retry</Button>;
 
   if (error instanceof ApiError && error.status === 404) {
@@ -143,10 +156,8 @@ export function ProgramWorkspacePage() {
   }
   if (!program) return <PageContainer><LoadingState message="Loading program workspace" /></PageContainer>;
 
-  const missing = missingInformation(program);
   const timeline = milestones(program);
   const actions = storedActions(program);
-  const initiation = usableText(program.phase)?.toLowerCase() === 'program initiation';
 
   return (
     <PageContainer>
@@ -210,15 +221,8 @@ export function ProgramWorkspacePage() {
           )}
         </WorkspaceSection>
 
-        <WorkspaceSection title="Missing Information" description="A completeness check of executive program context.">
-          <MissingInformationCard fields={missing} />
-        </WorkspaceSection>
-
-        <WorkspaceSection title="Next Steps" description="Stored program actions are separated from deterministic workspace recommendations.">
-          <Grid2 container spacing={2}>
-            <Grid2 size={{ xs: 12, md: 6 }}>
-              <Stack spacing={1.5}>
-                <Typography component="h3" fontWeight={650}>Stored Program Actions</Typography>
+        <WorkspaceSection title="Stored Program Actions" description="Actions persisted with the program; generated intelligence remains separate and read-only.">
+          <Stack spacing={1.5}>
                 {actions.length ? actions.map((action, index) => (
                   <Paper key={`${action.description}-${index}`} variant="outlined" sx={{ p: 2 }}>
                     <Typography fontWeight={600}>{action.description}</Typography>
@@ -226,17 +230,23 @@ export function ProgramWorkspacePage() {
                       .filter(Boolean).map((detail) => <Typography key={detail} variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>{detail}</Typography>)}
                   </Paper>
                 )) : <Typography color="text.secondary">No stored program actions are available.</Typography>}
-              </Stack>
-            </Grid2>
-            <Grid2 size={{ xs: 12, md: 6 }}>
-              <Stack spacing={1.5}>
-                <Typography component="h3" fontWeight={650}>Workspace Recommendations</Typography>
-                {initiation ? <RecommendationCard title="Internal Technical Kickoff" description="Recommended because the current phase is Program Initiation." /> : null}
-                {missing.length ? <RecommendationCard title="Collect executive program information" description={`Collect: ${missing.join(', ')}.`} /> : null}
-                {!initiation && !missing.length ? <Typography color="text.secondary">No deterministic recommendations apply.</Typography> : null}
-              </Stack>
-            </Grid2>
-          </Grid2>
+          </Stack>
+        </WorkspaceSection>
+
+        <WorkspaceSection title="Intelligence" description="Generate current decision support on demand. Results are not persisted.">
+          <Stack spacing={2}>
+            <Box><Button variant={intelligence ? 'outlined' : 'contained'} disabled={intelligenceLoading} onClick={generateIntelligence}>
+              {intelligenceLoading ? 'Generating Intelligence…' : intelligence ? 'Refresh Intelligence' : intelligenceError ? 'Retry Intelligence' : 'Generate Intelligence'}
+            </Button></Box>
+            {intelligenceLoading ? <LoadingState message="Generating workspace intelligence" /> : null}
+            {intelligenceError && !intelligenceLoading ? (
+              <ErrorState title="Intelligence is unavailable" message="The workspace remains available. Try generating intelligence again when the service is reachable." />
+            ) : null}
+            {!intelligence && !intelligenceLoading && !intelligenceError ? (
+              <Paper variant="outlined" sx={{ p: 3, bgcolor: '#fafbfc' }}><Typography color="text.secondary">Intelligence has not been generated for this workspace session.</Typography></Paper>
+            ) : null}
+            {intelligence && !intelligenceLoading ? <IntelligenceResult intelligence={intelligence} /> : null}
+          </Stack>
         </WorkspaceSection>
       </Stack>
     </PageContainer>

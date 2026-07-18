@@ -44,6 +44,11 @@ flowchart LR
 
 Solid lines describe current conceptual relationships. The React frontend calls the FastAPI read-only interface, which delegates program reads to the existing application persistence boundary.
 
+Workspace intelligence follows React → `GET /programs/{programId}/intelligence` →
+`app/intelligence.py` → existing context loader, prompt builder, persona routing, and
+`app/llm.py`. Generation is explicitly user-triggered; the browser never receives
+prompts or credentials.
+
 ## Boundary Responsibilities
 
 ### Backend
@@ -73,6 +78,21 @@ The reporting engine owns transformation of validated program state into audienc
 ### AI Engine
 
 The AI engine owns model-provider interaction and prompt execution boundaries. Today `app/llm.py`, `app/context_loader.py`, `app/prompt_builder.py`, and the relevant orchestration modules implement this capability using existing Markdown instructions and optional Gemini calls. Prompts and AI behavior remain unchanged in this sprint. Future provider abstraction, evaluation, observability, and safety controls should be added around—not silently alter—the established prompt contracts.
+
+For workspace intelligence, `app/intelligence.py` deep-copies the supplied program,
+calculates persona routing once, builds a bounded snapshot, and requests one strict
+JSON response. `app/intelligence_analysis.py` validates the exact field set, string
+and collection limits, and confidence enum with all-or-fallback behavior. The
+existing Gemini credential/model convention is reused with a 20-second timeout and
+no retry.
+
+Provider, configuration, timeout, empty-output, and parsing failures return visibly
+labeled grounded deterministic fallback. Persistence and unexpected application
+failures remain sanitized HTTP errors. Neither AI nor fallback calls `save_program`,
+writes session files, or persists intelligence. Transport excludes prompts,
+provider payloads, keys, routing reasons, hidden reasoning, exception details, and
+filesystem paths. Results are session-only; there is no streaming, polling, cache,
+background job, authentication, or authorization.
 
 ## Current Architecture
 

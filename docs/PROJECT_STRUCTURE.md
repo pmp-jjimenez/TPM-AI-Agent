@@ -14,6 +14,7 @@ This document describes the repository as it exists today.
 ├── backend/
 │   ├── api/
 │   │   ├── main.py
+│   │   ├── models.py
 │   │   ├── compat.py
 │   │   ├── dependencies.py
 │   │   ├── errors.py
@@ -42,6 +43,8 @@ This document describes the repository as it exists today.
 │   ├── application_version.py
 │   ├── engine.py
 │   ├── executive.py
+│   ├── intelligence.py
+│   ├── intelligence_analysis.py
 │   ├── llm.py
 │   ├── main.py
 │   ├── memory.py
@@ -133,11 +136,11 @@ macOS `.DS_Store` files may also exist locally. They are not part of the applica
 
 ### `backend/`
 
-Backend architecture boundary. The read-only FastAPI application lives under `backend/api/`, while existing domain and persistence implementation remains under `app/` to preserve imports, tests, and CLI behavior. The API reuses `app/memory.py` through a thin adapter.
+Backend architecture boundary. The read-only FastAPI application lives under `backend/api/`, while existing domain and persistence implementation remains under `app/` to preserve imports, tests, and CLI behavior. The API reuses `app/memory.py` and the workspace intelligence application service through thin injected adapters. `backend/api/models.py` defines the explicit intelligence transport contract.
 
 ### `frontend/`
 
-React + TypeScript web application built with Vite, Material UI, and React Router. It provides the responsive application shell and Programs routes. It does not yet call the backend API and contains no mock program data.
+React + TypeScript web application built with Vite, Material UI, and React Router. It provides the responsive application shell, program routes, stored-fact workspace, and explicit intelligence generation experience. It calls only FastAPI and contains no prompts, provider credentials, or runtime mock intelligence.
 
 ### `shared/`
 
@@ -145,7 +148,7 @@ Reserved for future versioned schemas and cross-boundary model contracts. Its cu
 
 ### `app/`
 
-Python CLI application modules. This is the executable layer that reads user input, loads Markdown context, calls Gemini, persists program JSON, and generates Markdown reports.
+Python application modules shared by CLI and API. `intelligence.py` is the side-effect-free orchestration boundary and `intelligence_analysis.py` owns strict bounded parsing; existing CLI modules continue to own input/output, persistence mutations, and generated artifacts.
 
 ### `data/`
 
