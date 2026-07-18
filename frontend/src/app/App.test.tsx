@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { renderApp } from '../test/renderApp';
 
 const alpha = {
@@ -10,7 +10,7 @@ const alpha = {
   health: 'Green',
   confidence: 'High',
   meeting_history: [{ date: '2026-07-01', title: 'Kickoff', description: 'Program kickoff' }],
-  metadata: { created_at: '2026-06-01T00:00:00Z', updated_at: '2026-07-17T00:00:00Z' },
+  metadata: { created_at: '2026-06-01T00:00:00Z', updated_at: '2026-07-17T00:00:00Z', source: 'test' },
 };
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -82,7 +82,7 @@ describe('Programs page', () => {
 });
 
 describe('Program workspace', () => {
-  it('renders loading and then real workspace data', async () => {
+  it('renders loading and then the executive workspace with real identity, status, and supported summary fields', async () => {
     let resolveRequest!: (value: Response) => void;
     vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise((resolve) => { resolveRequest = resolve; }));
     renderApp('/programs/alpha-program');
@@ -90,19 +90,97 @@ describe('Program workspace', () => {
 
     resolveRequest(jsonResponse(alpha));
     expect(await screen.findByRole('heading', { level: 1, name: 'Alpha Program' })).toBeInTheDocument();
-    expect(screen.getByText('Alpha description')).toBeInTheDocument();
-    expect(screen.getByText('Green')).toBeInTheDocument();
-    expect(screen.getByText('Kickoff')).toBeInTheDocument();
-    expect(screen.getByText('2026-07-17T00:00:00Z')).toBeInTheDocument();
+    expect(screen.getByText('Program ID: alpha-program')).toBeInTheDocument();
+    expect(screen.getByText('Alpha description Customer: Alpha customer. Current phase: Delivery. Health: Green. Confidence: High.')).toBeInTheDocument();
+    expect(screen.getAllByText('Green')).toHaveLength(2);
+    expect(screen.getByText('Jul 17, 2026')).toBeInTheDocument();
+    expect(screen.getByText('test')).toBeInTheDocument();
+    expect(screen.queryByText('Kickoff')).not.toBeInTheDocument();
   });
 
-  it('ignores malformed optional fields without crashing', async () => {
-    mockFetchOnce({ program_id: 'alpha-program', program_name: 'Alpha', health: 4, meeting_history: [null, 'bad', {}], metadata: [] });
+  it('states when supported information is insufficient and ignores malformed optional fields', async () => {
+    mockFetchOnce({ program_id: 'alpha-program', program_name: 'Alpha', health: 4, milestones: [null, 'bad', {}, { title: 4 }], next_actions: [null, {}, 7], metadata: [] });
     renderApp('/programs/alpha-program');
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Alpha' })).toBeInTheDocument();
-    expect(screen.getByText('No supported timeline entries are available.')).toBeInTheDocument();
-    expect(screen.getAllByText('Health')).toHaveLength(2);
+    expect(screen.getByText('Available program information is insufficient to provide an executive summary.')).toBeInTheDocument();
+    expect(screen.getByText('No milestones recorded')).toBeInTheDocument();
+    expect(screen.getByText('No stored program actions are available.')).toBeInTheDocument();
+  });
+
+  it('keeps Unknown as a real status value and detects only absent completeness fields', async () => {
+    mockFetchOnce({
+      ...alpha,
+      health: 'Unknown',
+      sponsor: 'Unknown',
+      budget: 0,
+      target_go_live: 'Unknown',
+      architecture: { summary: 'Unknown' },
+      dependencies: ['Unknown'],
+      governance: 'Unknown',
+    });
+    renderApp('/programs/alpha-program');
+
+    expect(await screen.findAllByText('Unknown')).toHaveLength(2);
+    expect(screen.getByText('All executive completeness fields are recorded.')).toBeInTheDocument();
+    expect(screen.queryByText('Collect executive program information')).not.toBeInTheDocument();
+  });
+
+  it('shows missing executive information and deterministic Program Initiation recommendations', async () => {
+    mockFetchOnce({ ...alpha, phase: 'Program Initiation' });
+    renderApp('/programs/alpha-program');
+
+    expect(await screen.findByText('These details are not recorded. They are not risks or issues.')).toBeInTheDocument();
+    for (const field of ['Sponsor', 'Budget', 'Target Go-Live', 'Architecture', 'Dependencies', 'Governance']) {
+      expect(screen.getByText(field)).toBeInTheDocument();
+    }
+    expect(screen.getByText('Internal Technical Kickoff')).toBeInTheDocument();
+    expect(screen.getByText('Collect executive program information')).toBeInTheDocument();
+  });
+
+  it('renders explicit milestones and never substitutes meeting history', async () => {
+    mockFetchOnce({
+      ...alpha,
+      milestones: [null, 'bad', { name: 'Architecture Review', target_date: '2026-08-10', status: 'Scheduled' }, { title: 3 }],
+    });
+    renderApp('/programs/alpha-program');
+
+    expect(await screen.findByText('Architecture Review')).toBeInTheDocument();
+    expect(screen.getByText('Aug 10, 2026')).toBeInTheDocument();
+    expect(screen.getByText('Status: Scheduled')).toBeInTheDocument();
+    expect(screen.queryByText('Kickoff')).not.toBeInTheDocument();
+  });
+
+  it('keeps stored next actions distinct from workspace recommendations and preserves explicit metadata', async () => {
+    mockFetchOnce({
+      ...alpha,
+      phase: 'Program Initiation',
+      next_actions: [
+        'Confirm rollout cohort',
+        { action: 'Review support model', status: 'Open', owner: 'Operations', due_date: '2026-08-01' },
+        { description: 7 },
+      ],
+    });
+    renderApp('/programs/alpha-program');
+
+    const storedHeading = await screen.findByRole('heading', { level: 3, name: 'Stored Program Actions' });
+    const recommendationHeading = screen.getByRole('heading', { level: 3, name: 'Workspace Recommendations' });
+    expect(storedHeading.compareDocumentPosition(screen.getByText('Confirm rollout cohort')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(recommendationHeading.compareDocumentPosition(screen.getByText('Internal Technical Kickoff')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByText('Status: Open')).toBeInTheDocument();
+    expect(screen.getByText('Owner: Operations')).toBeInTheDocument();
+    expect(screen.getByText('Due: 2026-08-01')).toBeInTheDocument();
+  });
+
+  it('declares single-column narrow breakpoints for executive status sections', async () => {
+    mockFetchOnce(alpha);
+    renderApp('/programs/alpha-program');
+
+    const headerGrid = await screen.findByTestId('executive-header-status-grid');
+    const healthGrid = screen.getByTestId('program-health-grid');
+    expect(within(headerGrid).getAllByText(/Current Phase|Health|Confidence/)).toHaveLength(3);
+    expect(headerGrid.querySelectorAll('.MuiGrid2-grid-xs-12')).toHaveLength(3);
+    expect(healthGrid.querySelectorAll('.MuiGrid2-grid-xs-12')).toHaveLength(3);
   });
 
   it('renders a structured 404 and returns to Programs', async () => {

@@ -6,6 +6,14 @@ export interface ProgramRecord {
   phase?: string;
   health?: string;
   confidence?: string;
+  milestones?: unknown[];
+  next_actions?: unknown[];
+  sponsor?: unknown;
+  budget?: unknown;
+  target_go_live?: unknown;
+  architecture?: unknown;
+  dependencies?: unknown;
+  governance?: unknown;
   meeting_history?: unknown[];
   metadata?: {
     created_at?: string | null;
@@ -38,6 +46,8 @@ export function parseProgram(value: unknown): ProgramRecord | null {
     phase: usableText(record.phase),
     health: usableText(record.health),
     confidence: usableText(record.confidence),
+    milestones: Array.isArray(record.milestones) ? record.milestones : undefined,
+    next_actions: Array.isArray(record.next_actions) ? record.next_actions : undefined,
     meeting_history: Array.isArray(record.meeting_history) ? record.meeting_history : undefined,
     metadata,
   };

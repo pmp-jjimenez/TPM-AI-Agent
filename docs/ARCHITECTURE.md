@@ -192,6 +192,22 @@ The API must currently be started from the repository root because `app/memory.p
 4. Selecting a program navigates to an encoded `/programs/{programId}` route. The workspace requests the matching API resource and never treats an unmatched route parameter as loaded program data.
 5. Requests are cancelled when their page unmounts. Network and server failures show safe retry actions, malformed payloads show a generic production error, and a workspace 404 shows a return-to-Programs action. Backend error text is retained by the transport layer but is not rendered without filtering.
 
+### Executive Workspace Presentation Boundary
+
+The browser Program Workspace presents existing program state in an executive-first order: identity and reported status, deterministic summary, health, project overview, explicit milestones, completeness gaps, and next steps. This is a read-only presentation layer. It does not write through the API, alter persistence, calculate composite health, manufacture KPIs, or infer delivery state from risks and issues.
+
+Stored facts and workspace recommendations remain distinct:
+
+- The executive summary is assembled locally from only `program_name`, `description`, `customer`, `phase`, `health`, and `confidence`. Without a usable description it reports insufficient information rather than synthesizing a narrative.
+- Health cards display only the API-provided phase, health, and confidence. A literal `Unknown` is retained as stored information and styled as uncertain, not erroneous.
+- The timeline reads only an explicit `milestones` collection and ignores malformed entries. `meeting_history` is not treated as milestone data. Because milestones are deferred from the canonical v1 schema, an empty milestone state is expected for current records.
+- Executive completeness checks direct values for sponsor, budget, target go-live, architecture, dependencies, and governance. Only absent, null, empty, or unusable values are missing; `Unknown` is a present value. These gaps are informational and are not converted into risks or issues.
+- Existing `next_actions` are rendered as stored program actions using defensive support for legacy strings and current object shapes. Separately, deterministic UI rules recommend an Internal Technical Kickoff for `Program Initiation` and collection of named missing completeness fields. Recommendations are not persisted.
+
+No AI engine participates in the workspace. Summary composition, completeness checks, milestone filtering, and recommendations are deterministic frontend functions over the existing API response.
+
+Responsive grids collapse status, metadata, and next-step columns at narrow breakpoints. Content wraps to prevent horizontal overflow while the existing desktop drawer and mobile temporary-drawer behavior remain owned by the shared application shell.
+
 `VITE_API_BASE_URL` is the frontend's only API configuration source and must be an absolute HTTP or HTTPS URL. The API remains read-only and has no authentication or authorization. `GET /programs` currently returns full records rather than summaries, so list payload growth is a known limitation.
 
 The CLI continues to run with `python3 app/main.py` and uses the same persistence functions directly. Adding the API does not change CLI commands, menus, or execution paths.

@@ -66,8 +66,27 @@ src/
 - Loading, empty, offline, server-error, malformed-response, and not-found states remain usable. Network and server failures offer retry; workspace 404 responses offer a return to Programs.
 - API records are parsed defensively. Missing optional values are not replaced with domain defaults, and malformed list entries without a usable `program_id` are omitted.
 
+## Executive program workspace
+
+The program workspace is executive-first: identity and reported status appear before supporting metadata, completeness gaps, and next steps. It is intentionally an information and decision-support surface rather than a JSON viewer or decorative dashboard. It does not calculate KPIs, composite health, percentages, or inferred RAG status.
+
+The workspace keeps stored facts separate from deterministic recommendations:
+
+- The executive summary uses only the stored program name, description, customer, phase, health, and confidence. If a usable description is unavailable, the workspace states that the available information is insufficient.
+- Program Health repeats only the API-provided phase, health, and confidence. `Unknown` is displayed as a real value with restrained uncertainty styling; it is not treated as missing or as a failure.
+- Project Overview displays customer, description, metadata source, and timestamps. Unambiguous ISO dates are formatted for readability; other usable date text is preserved.
+- Timeline displays only usable records from an explicit `milestones` collection. It never converts `meeting_history` into milestones and shows a professional empty state when milestones are absent or malformed.
+- Missing Information checks the explicit sponsor, budget, target go-live, architecture, dependencies, and governance values. Only absent, null, empty, or unusable values are listed. The literal value `Unknown` counts as recorded information, and completeness gaps are not presented as risks or issues.
+- Stored `next_actions` are shown separately from workspace recommendations. Legacy strings and supported object shapes are parsed defensively. The workspace recommends `Internal Technical Kickoff` only for the exact `Program Initiation` phase and recommends collecting the specifically missing completeness fields.
+
+These rules run entirely in the browser over the existing API response. They do not call an AI model, persist recommendations, create actions, or modify program data.
+
+The workspace uses wrapping metadata grids and breakpoint-aware cards. Status cards, overview metadata, next-step columns, and other multi-column content collapse to a single column on narrow screens without changing the existing responsive sidebar behavior.
+
 ## Current limitations
 
 - `GET /programs` returns full program records rather than list summaries, which may increase payload size as records grow.
 - The API contract intentionally remains flexible and persistence may apply compatibility defaults before returning records.
 - The frontend is read-only and has no authentication, editing, search, filtering, or pagination.
+- Milestones and executive completeness fields are not part of the canonical Program Data Foundation v1 schema. They appear only when explicitly present in an API record; consequently, current records commonly show an empty timeline and completeness gaps.
+- Workspace recommendations are limited to local deterministic rules. There is no AI-generated workspace summary, prioritization, or next-best-action intelligence.
