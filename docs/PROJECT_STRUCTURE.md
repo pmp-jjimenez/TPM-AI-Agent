@@ -14,6 +14,14 @@ This document describes the repository as it exists today.
 ├── backend/
 │   └── README.md
 ├── frontend/
+│   ├── src/
+│   │   ├── app/
+│   │   ├── components/
+│   │   ├── features/
+│   │   └── test/
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── vite.config.ts
 │   └── README.md
 ├── shared/
 │   ├── README.md
@@ -120,7 +128,7 @@ Backend architecture boundary. The current Python implementation remains under `
 
 ### `frontend/`
 
-Reserved for a future React + TypeScript application. It contains documentation only and has no generated application or dependencies.
+React + TypeScript web application built with Vite, Material UI, and React Router. It provides the responsive application shell and Programs routes. It contains no API client or mock program data because backend integration is not yet implemented.
 
 ### `shared/`
 

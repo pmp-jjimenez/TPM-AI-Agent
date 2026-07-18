@@ -9,7 +9,7 @@ TPM Operating System is evolving from a local Python CLI into a production-grade
 | Boundary | Responsibility |
 |---|---|
 | `backend/` | Backend ownership boundary. During this foundation sprint, the working Python implementation remains in `app/` to preserve imports and CLI behavior. |
-| `frontend/` | Placeholder for a future React + TypeScript user interface. No frontend runtime exists yet. |
+| `frontend/` | React + TypeScript browser application with client-side routing and reusable application layout. |
 | `shared/` | Placeholder for versioned, implementation-neutral contracts such as schemas and generated models. |
 | `docs/` | Product, architecture, operating-model, and engineering documentation. |
 | `scripts/` | Repository development, validation, and future operational utilities. |
@@ -20,7 +20,7 @@ The intended component relationships are:
 flowchart LR
     User[TPM user]
     CLI[Current Python CLI]
-    Web[Future React + TypeScript frontend]
+    Web[React + TypeScript frontend]
     API[Future API layer]
     Services[Backend application services]
     AI[AI engine]
@@ -30,7 +30,7 @@ flowchart LR
     Contracts[Shared versioned contracts]
 
     User --> CLI
-    User -. future .-> Web
+    User --> Web
     CLI --> Services
     Web -. future .-> API
     API -. future .-> Services
@@ -52,7 +52,7 @@ The backend owns program domain behavior, workflow orchestration, validation, pe
 
 ### Frontend
 
-The future frontend will own browser interaction, accessible presentation, client-side navigation, and view-specific state. It will consume versioned API contracts and must not duplicate backend business rules, prompts, persistence behavior, or AI orchestration. No React or TypeScript application is generated in this sprint.
+The frontend owns browser interaction, accessible presentation, client-side navigation, and view-specific state. It provides the application shell and honest integration-pending program views. It does not yet call a backend API and must not duplicate backend business rules, prompts, persistence behavior, or AI orchestration.
 
 ### Shared Modules
 
@@ -209,7 +209,7 @@ This layer is intentionally independent of Gemini. It does not call an AI model,
 - Local JSON files are the only program persistence mechanism.
 - No schema migration framework; compatibility defaults provide additive legacy support.
 - Automated coverage uses `unittest`, but there is no separate CI configuration in this repository.
-- No implemented web interface.
+- The web interface provides a routed application foundation, but program data remains unavailable until backend integration.
 - No implemented Docker runtime.
 - No implemented dependency management with `uv`.
 - SOW intake supports selectable-text local PDFs only; there is no upload service, OCR, password prompt, or persisted analysis artifact.
