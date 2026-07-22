@@ -14,6 +14,7 @@ const alpha = {
 };
 
 const aiIntelligence = {
+  schema_version: '1.0.0',
   program_id: 'alpha-program',
   generated_at: '2026-07-17T12:00:00Z',
   source: 'ai',
@@ -23,11 +24,14 @@ const aiIntelligence = {
     supporting_personas: [{ id: 'delivery_manager', display_name: 'Delivery Manager' }],
   },
   summary: 'Grounded AI intelligence summary.',
-  attention_items: [],
-  risks: ['Stored delivery risk'],
-  missing_information: [],
-  recommended_actions: ['Review delivery plan'],
   confidence: 'High',
+  findings: [
+    { id: 'fnd_1111111111111111', category: 'risk', statement: 'Stored delivery risk', confidence: 'High', evidence_refs: ['/risks/0'], impact: 'Delivery may be affected.' },
+    { id: 'fnd_2222222222222222', category: 'dependency', statement: 'Vendor delivery is required.', confidence: 'Medium', evidence_refs: ['/dependencies/0'] },
+  ],
+  recommendations: [{ id: 'rec_3333333333333333', priority: 'High', statement: 'Review delivery plan', rationale: 'The recorded risk requires a controlled response.', evidence_refs: ['/risks/0'], related_finding_ids: ['fnd_1111111111111111'] }],
+  decisions_required: [{ id: 'dec_4444444444444444', priority: 'Medium', statement: 'Confirm risk treatment.', reason: 'Delivery direction is required.', related_finding_ids: ['fnd_1111111111111111'], related_recommendation_ids: ['rec_3333333333333333'] }],
+  next_action: { id: 'act_5555555555555555', priority: 'High', statement: 'Review the delivery plan now.', rationale: 'This is the highest-priority supported action.', related_finding_ids: ['fnd_1111111111111111'], related_recommendation_ids: ['rec_3333333333333333'] },
   limitations: [],
 };
 
@@ -148,8 +152,15 @@ describe('Program workspace', () => {
     expect(screen.getByText('Technical Program Manager')).toBeInTheDocument();
     expect(screen.getByText('Delivery Manager')).toBeInTheDocument();
     expect(screen.getByText('Stored delivery risk')).toBeInTheDocument();
+    expect(screen.getByText('Risks')).toBeInTheDocument();
+    expect(screen.getByText('Dependencies')).toBeInTheDocument();
     expect(screen.getByText('Review delivery plan')).toBeInTheDocument();
-    expect(screen.getByText('No grounded attention items were identified.')).toBeInTheDocument();
+    expect(screen.getByText('The recorded risk requires a controlled response.')).toBeInTheDocument();
+    expect(screen.getByText('Confirm risk treatment.')).toBeInTheDocument();
+    expect(screen.getByText('Delivery direction is required.')).toBeInTheDocument();
+    expect(screen.getByText('Review the delivery plan now.')).toBeInTheDocument();
+    expect(screen.getAllByText('Evidence: /risks/0')).toHaveLength(2);
+    expect(screen.getByText('1.0.0')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Intelligence' }));
     expect(await screen.findByText('Refreshed intelligence.')).toBeInTheDocument();
     expect(fetch).toHaveBeenCalledTimes(3);
@@ -198,6 +209,23 @@ describe('Program workspace', () => {
     expect(screen.queryByText('private network detail')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Retry Intelligence' }));
     expect(await screen.findByText('Grounded AI intelligence summary.')).toBeInTheDocument();
+  });
+
+  it('rejects malformed nested intelligence and invalid evidence references', async () => {
+    const malformed = { ...aiIntelligence, findings: [{ ...aiIntelligence.findings[0], evidence_refs: ['not-a-pointer'] }] };
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(jsonResponse(alpha)).mockResolvedValueOnce(jsonResponse(malformed));
+    renderApp('/programs/alpha-program');
+    fireEvent.click(await screen.findByRole('button', { name: 'Generate Intelligence' }));
+    expect(await screen.findByText('Intelligence is unavailable')).toBeInTheDocument();
+    expect(screen.queryByText('Stored delivery risk')).not.toBeInTheDocument();
+  });
+
+  it('rejects relationships to IDs absent from the same result', async () => {
+    const malformed = { ...aiIntelligence, next_action: { ...aiIntelligence.next_action, related_finding_ids: ['fnd_aaaaaaaaaaaaaaaa'] } };
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(jsonResponse(alpha)).mockResolvedValueOnce(jsonResponse(malformed));
+    renderApp('/programs/alpha-program');
+    fireEvent.click(await screen.findByRole('button', { name: 'Generate Intelligence' }));
+    expect(await screen.findByText('Intelligence is unavailable')).toBeInTheDocument();
   });
 
   it('renders explicit milestones and never substitutes meeting history', async () => {

@@ -9,10 +9,26 @@ APP_DIR = ROOT / "app"
 if str(APP_DIR) not in sys.path:
     sys.path.insert(0, str(APP_DIR))
 
-from prompt_builder import build_new_program_prompt
+from prompt_builder import build_new_program_prompt, build_workspace_intelligence_prompt
 
 
 class PromptBuilderTests(unittest.TestCase):
+    def test_workspace_prompt_defines_contract_v1_safety_and_evidence_rules(self):
+        prompt = build_workspace_intelligence_prompt(
+            {"phase": "Program Initiation", "risks": ["Stored risk"]},
+            ("/phase", "/risks/0"),
+            "TPM context.",
+            {"primary_persona": "technical_program_manager", "supporting_personas": [], "reasons": [], "routing_version": "1.0.0"},
+        )
+        for concept in ("findings", "recommendations", "decisions_required", "next_action", "missing_information", "assumption", "dependency", "conflict", "Critical", "related_finding_indexes"):
+            self.assertIn(concept, prompt)
+        self.assertIn('"/phase"', prompt)
+        self.assertIn('"/risks/0"', prompt)
+        self.assertIn("zero-based", prompt)
+        self.assertIn("Do not generate IDs", prompt)
+        self.assertIn("Do not disclose chain-of-thought", prompt)
+        self.assertIn("stored, approved, committed, or executed", prompt)
+
     def test_prompt_includes_project_context_and_expected_sections(self):
         project_description = "Deploy Microsoft Teams across LATAM business units."
         tpm_context = "TPM context: use RAID discipline and confidence scoring."

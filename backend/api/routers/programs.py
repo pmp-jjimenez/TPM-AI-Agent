@@ -50,7 +50,7 @@ def get_program(programId: str, reader: ProgramReader = Depends(get_program_read
     return program
 
 
-@router.get("/{programId}/intelligence", response_model=IntelligenceResponse)
+@router.get("/{programId}/intelligence", response_model=IntelligenceResponse, response_model_exclude_none=True)
 def get_program_intelligence(
     programId: str,
     reader: ProgramReader = Depends(get_program_reader),

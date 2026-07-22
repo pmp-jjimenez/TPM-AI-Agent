@@ -74,14 +74,13 @@ function IntelligenceList({ items, empty }: { items: string[]; empty: string }) 
   ) : <Typography color="text.secondary">{empty}</Typography>;
 }
 
+function EvidenceRefs({ refs }: { refs: string[] }) {
+  return refs.length ? <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>Evidence: {refs.join(', ')}</Typography> : null;
+}
+
 export function IntelligenceResult({ intelligence }: { intelligence: IntelligenceResponse }) {
   const fallback = intelligence.source === 'deterministic_fallback';
-  const sections = [
-    ['Attention Items', intelligence.attention_items, 'No grounded attention items were identified.'],
-    ['Risks', intelligence.risks, 'No grounded risks were identified.'],
-    ['Missing Information', intelligence.missing_information, 'No grounded missing information was identified.'],
-    ['Recommended Actions', intelligence.recommended_actions, 'No grounded actions were recommended.'],
-  ] as const;
+  const categoryLabels = { fact: 'Facts', missing_information: 'Missing Information', assumption: 'Assumptions', risk: 'Risks', dependency: 'Dependencies', conflict: 'Conflicts' } as const;
   return (
     <Stack spacing={2.5}>
       <Stack direction={{ xs: 'column', sm: 'row' }} gap={1} alignItems={{ sm: 'center' }}>
@@ -93,20 +92,36 @@ export function IntelligenceResult({ intelligence }: { intelligence: Intelligenc
           { label: 'Primary Persona', value: intelligence.routing.primary_persona.display_name },
           { label: 'Supporting Personas', value: intelligence.routing.supporting_personas.map((persona) => persona.display_name).join(', ') || 'None' },
           { label: 'Confidence', value: intelligence.confidence },
+          { label: 'Schema Version', value: intelligence.schema_version },
           { label: 'Generated', value: new Date(intelligence.generated_at).toLocaleString() },
         ]} />
       </Paper>
       <Box><Typography component="h3" fontWeight={650}>Summary</Typography><Typography sx={{ mt: 0.75 }}>{intelligence.summary || 'No grounded summary is available.'}</Typography></Box>
+      <Paper variant="outlined" sx={{ p: 2.5, borderLeft: '4px solid', borderLeftColor: 'primary.main' }}>
+        <Stack direction="row" justifyContent="space-between" gap={2}><Typography component="h3" fontWeight={700}>Next Action</Typography><Chip label={intelligence.next_action.priority} size="small" color="primary" /></Stack>
+        <Typography sx={{ mt: 1, fontWeight: 650 }}>{intelligence.next_action.statement}</Typography>
+        <Typography color="text.secondary" sx={{ mt: 0.5 }}>{intelligence.next_action.rationale}</Typography>
+      </Paper>
+      <Box><Typography component="h3" fontWeight={650} sx={{ mb: 1 }}>Findings</Typography>
       <Grid2 container spacing={2}>
-        {sections.map(([title, items, empty]) => (
+        {Object.entries(categoryLabels).map(([category, title]) => {
+          const items = intelligence.findings.filter((finding) => finding.category === category);
+          return (
           <Grid2 key={title} size={{ xs: 12, md: 6 }}>
             <Paper variant="outlined" sx={{ p: 2, height: '100%' }}>
               <Typography component="h3" fontWeight={650} sx={{ mb: 1 }}>{title}</Typography>
-              <IntelligenceList items={items} empty={empty} />
+              {items.length ? <Stack spacing={1.5}>{items.map((finding) => <Box key={finding.id}><Typography>{finding.statement}</Typography>{finding.impact ? <Typography color="text.secondary" sx={{ mt: 0.5 }}>{finding.impact}</Typography> : null}<Typography variant="caption" color="text.secondary">Confidence: {finding.confidence}</Typography><EvidenceRefs refs={finding.evidence_refs} /></Box>)}</Stack> : <Typography color="text.secondary">No {title.toLowerCase()} were identified.</Typography>}
             </Paper>
           </Grid2>
-        ))}
+        )})}
       </Grid2>
+      </Box>
+      <Box><Typography component="h3" fontWeight={650} sx={{ mb: 1 }}>Recommendations</Typography>
+        {intelligence.recommendations.length ? <Stack spacing={1.5}>{intelligence.recommendations.map((recommendation) => <Paper variant="outlined" sx={{ p: 2 }} key={recommendation.id}><Stack direction="row" justifyContent="space-between" gap={2}><Typography fontWeight={650}>{recommendation.statement}</Typography><Chip label={recommendation.priority} size="small" /></Stack><Typography color="text.secondary" sx={{ mt: 0.5 }}>{recommendation.rationale}</Typography><EvidenceRefs refs={recommendation.evidence_refs} /></Paper>)}</Stack> : <Typography color="text.secondary">No grounded recommendations were identified.</Typography>}
+      </Box>
+      <Box><Typography component="h3" fontWeight={650} sx={{ mb: 1 }}>Decisions Required</Typography>
+        {intelligence.decisions_required.length ? <Stack spacing={1.5}>{intelligence.decisions_required.map((decision) => <Paper variant="outlined" sx={{ p: 2 }} key={decision.id}><Stack direction="row" justifyContent="space-between" gap={2}><Typography fontWeight={650}>{decision.statement}</Typography><Chip label={decision.priority} size="small" /></Stack><Typography color="text.secondary" sx={{ mt: 0.5 }}>{decision.reason}</Typography></Paper>)}</Stack> : <Typography color="text.secondary">No decisions are currently required.</Typography>}
+      </Box>
       {intelligence.limitations.length ? (
         <Paper variant="outlined" sx={{ p: 2, bgcolor: '#fafbfc' }}>
           <Typography component="h3" fontWeight={650} sx={{ mb: 1 }}>Limitations</Typography>

@@ -2,7 +2,11 @@ from copy import deepcopy
 from datetime import datetime, timezone
 
 from context_loader import load_core_context
-from intelligence_analysis import IntelligenceAnalysisError, parse_intelligence_analysis
+from intelligence_analysis import (
+    IntelligenceAnalysisError,
+    finalize_intelligence_analysis,
+    parse_intelligence_analysis,
+)
 from llm import ProviderExecutionError, execute_provider
 from persona_routing import calculate_persona_routing, persona_display_name
 from prompt_builder import build_workspace_intelligence_prompt
@@ -44,12 +48,12 @@ class WorkspaceIntelligenceService:
         )
         generated_at = self.clock().isoformat()
         transport_routing = _transport_routing(routing)
-        bounded = bounded_program_snapshot(snapshot)
+        bounded, evidence_catalog = extract_intelligence_evidence(snapshot)
         try:
             prompt = build_workspace_intelligence_prompt(
-                bounded, load_core_context(), routing
+                bounded, evidence_catalog, load_core_context(), routing
             )
-            analysis = parse_intelligence_analysis(self.provider(prompt))
+            analysis = parse_intelligence_analysis(self.provider(prompt), evidence_catalog)
             return {
                 "program_id": _text(snapshot.get("program_id")),
                 "generated_at": generated_at,
@@ -59,7 +63,7 @@ class WorkspaceIntelligenceService:
             }
         except (ProviderExecutionError, IntelligenceAnalysisError):
             return deterministic_intelligence(
-                snapshot, transport_routing, generated_at
+                snapshot, transport_routing, generated_at, bounded, evidence_catalog
             )
 
 
@@ -84,29 +88,117 @@ def bounded_program_snapshot(program):
     }
 
 
-def deterministic_intelligence(program, routing, generated_at):
-    risks = _descriptions(program.get("risks"))
-    issues = _descriptions(program.get("issues"))
+def extract_intelligence_evidence(program):
+    """Return the exact prompt snapshot and its nonempty, referenceable JSON pointers."""
+    snapshot = bounded_program_snapshot(program)
+    catalog = []
+    _collect_evidence_paths(snapshot, "", catalog)
+    return snapshot, tuple(sorted(catalog))
+
+
+def _collect_evidence_paths(value, path, catalog):
+    if isinstance(value, dict):
+        for key, item in value.items():
+            escaped = str(key).replace("~", "~0").replace("/", "~1")
+            _collect_evidence_paths(item, f"{path}/{escaped}", catalog)
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            _collect_evidence_paths(item, f"{path}/{index}", catalog)
+    elif _has_value(value) and path:
+        catalog.append(path)
+
+
+def deterministic_intelligence(program, routing, generated_at, bounded=None, evidence_catalog=None):
+    if bounded is None or evidence_catalog is None:
+        bounded, evidence_catalog = extract_intelligence_evidence(program)
+    risks = bounded["risks"]
+    issues = bounded["issues"]
     missing = [label for label, field in COMPLETENESS_FIELDS if not _has_value(program.get(field))]
+    findings = []
     recommendations = []
+    decisions = []
+    for index, risk in enumerate(risks):
+        findings.append({
+            "category": "risk", "statement": risk, "confidence": "High",
+            "evidence_refs": [f"/risks/{index}"],
+        })
+    for index, issue in enumerate(issues):
+        findings.append({
+            "category": "fact", "statement": f"A program issue is recorded: {issue}",
+            "confidence": "High", "evidence_refs": [f"/issues/{index}"],
+        })
+    missing_indexes = {}
+    for label, field in COMPLETENESS_FIELDS:
+        if label in missing:
+            missing_indexes[field] = len(findings)
+            findings.append({
+                "category": "missing_information",
+                "statement": f"{label} is not recorded.",
+                "confidence": "High", "evidence_refs": [],
+            })
     if _text(program.get("phase")).lower() == "program initiation":
-        recommendations.append("Internal Technical Kickoff")
+        phase_finding = len(findings)
+        findings.append({
+            "category": "fact", "statement": "The program is in Program Initiation.",
+            "confidence": "High", "evidence_refs": ["/phase"],
+        })
+        recommendations.append({
+            "priority": "High", "statement": "Conduct the Internal Technical Kickoff.",
+            "rationale": "The initiation phase requires technical alignment before delivery planning.",
+            "evidence_refs": ["/phase"], "related_finding_indexes": [phase_finding],
+        })
     if missing:
-        recommendations.append("Collect executive program information: " + ", ".join(missing))
+        recommendations.append({
+            "priority": "Medium",
+            "statement": "Collect executive program information: " + ", ".join(missing) + ".",
+            "rationale": "Completing the program record will improve decision support and confidence.",
+            "evidence_refs": [],
+            "related_finding_indexes": [missing_indexes[field] for _label, field in COMPLETENESS_FIELDS if field in missing_indexes],
+        })
+    if "sponsor" in missing_indexes:
+        decisions.append({
+            "priority": "High", "statement": "Confirm the accountable executive sponsor.",
+            "reason": "Executive accountability cannot be established from the current program record.",
+            "related_finding_indexes": [missing_indexes["sponsor"]],
+            "related_recommendation_indexes": [len(recommendations) - 1] if missing else [],
+        })
+    if recommendations:
+        selected = min(range(len(recommendations)), key=lambda index: _priority_rank(recommendations[index]["priority"]))
+        recommendation = recommendations[selected]
+        next_action = {
+            "priority": recommendation["priority"],
+            "statement": recommendation["statement"],
+            "rationale": recommendation["rationale"],
+            "related_finding_indexes": recommendation["related_finding_indexes"],
+            "related_recommendation_indexes": [selected],
+        }
+    else:
+        next_action = {
+            "priority": "Low", "statement": "Review the current program state with accountable stakeholders.",
+            "rationale": "No stronger deterministic action is supported by the bounded program evidence.",
+            "related_finding_indexes": [], "related_recommendation_indexes": [],
+        }
     summary = _deterministic_summary(program)
+    analysis = finalize_intelligence_analysis({
+        "summary": summary,
+        "confidence": _confidence(program.get("confidence")),
+        "findings": findings,
+        "recommendations": recommendations,
+        "decisions_required": decisions,
+        "next_action": next_action,
+        "limitations": [FALLBACK_LIMITATION],
+    }, evidence_catalog)
     return {
         "program_id": _text(program.get("program_id")),
         "generated_at": generated_at,
         "source": "deterministic_fallback",
         "routing": routing,
-        "summary": summary,
-        "attention_items": issues,
-        "risks": risks,
-        "missing_information": missing,
-        "recommended_actions": recommendations,
-        "confidence": _confidence(program.get("confidence")),
-        "limitations": [FALLBACK_LIMITATION],
+        **analysis,
     }
+
+
+def _priority_rank(priority):
+    return {"Critical": 0, "High": 1, "Medium": 2, "Low": 3}[priority]
 
 
 def _transport_routing(routing):

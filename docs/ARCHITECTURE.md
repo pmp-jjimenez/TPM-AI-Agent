@@ -49,6 +49,16 @@ Workspace intelligence follows React → `GET /programs/{programId}/intelligence
 `app/llm.py`. Generation is explicitly user-triggered; the browser never receives
 prompts or credentials.
 
+Workspace Intelligence Contract v1 (`schema_version: 1.0.0`) replaces parallel string
+arrays with categorized findings, structured recommendations, decisions required, and
+one prioritized next action. The backend extracts one bounded program snapshot and a
+catalog of nonempty RFC 6901 JSON Pointer evidence paths. Gemini may reference only
+that catalog and uses array indexes for relationships; the strict parser validates the
+complete provider result before the backend assigns deterministic SHA-256-based IDs and
+resolves relationships. Provider or validation failure produces a complete deterministic
+result through the same contract finalizer. AI and fallback results therefore have the
+same response schema, while `source` identifies their generation path.
+
 ## Boundary Responsibilities
 
 ### Backend
@@ -222,9 +232,9 @@ Stored facts and workspace recommendations remain distinct:
 - Health cards display only the API-provided phase, health, and confidence. A literal `Unknown` is retained as stored information and styled as uncertain, not erroneous.
 - The timeline reads only an explicit `milestones` collection and ignores malformed entries. `meeting_history` is not treated as milestone data. Because milestones are deferred from the canonical v1 schema, an empty milestone state is expected for current records.
 - Executive completeness checks direct values for sponsor, budget, target go-live, architecture, dependencies, and governance. Only absent, null, empty, or unusable values are missing; `Unknown` is a present value. These gaps are informational and are not converted into risks or issues.
-- Existing `next_actions` are rendered as stored program actions using defensive support for legacy strings and current object shapes. Separately, deterministic UI rules recommend an Internal Technical Kickoff for `Program Initiation` and collection of named missing completeness fields. Recommendations are not persisted.
+- Existing `next_actions` are rendered as stored program actions using defensive support for legacy strings and current object shapes. Generated recommendations, required decisions, and the primary next action remain visually and semantically separate from stored actions and are not persisted.
 
-No AI engine participates in the workspace. Summary composition, completeness checks, milestone filtering, and recommendations are deterministic frontend functions over the existing API response.
+The browser performs transport validation and presentation only. Categorization, evidence validation, stable IDs, recommendation priority, decision requirements, next-action selection, and deterministic fallback remain backend responsibilities. Intelligence is generated only after explicit user action and is not persisted.
 
 Responsive grids collapse status, metadata, and next-step columns at narrow breakpoints. Content wraps to prevent horizontal overflow while the existing desktop drawer and mobile temporary-drawer behavior remain owned by the shared application shell.
 
@@ -236,12 +246,19 @@ SOW program records store only suitable canonical fields and the source filename
 
 ## AI Boundary
 
-The AI model is used in the New Program flow only:
+The AI model is used through bounded, workflow-specific application paths:
 
 - The system loads selected local Markdown context.
 - The system builds a prompt with that context, the user's project description, and optional already-calculated persona routing context.
 - The system calls Gemini through `app/llm.py`.
 - The system stores the prompt and response as generated session files.
+
+Workspace Intelligence uses its existing single prompt and single Gemini request. It
+does not store the prompt, provider response, evidence snapshot, or generated result.
+Its strict all-or-fallback parser does not request or retain chain-of-thought. Contract
+v1 does not add IntelligenceRun, DecisionRecord or feedback persistence, PostgreSQL,
+authentication, a Program Knowledge Model, vector storage, autonomous agents, model
+training, background jobs, retries, or deployment behavior.
 
 Persona routing does not add Gemini calls. The system does not call one model per persona, simulate an expert debate, or claim independent autonomous agents were executed. The AI does not autonomously modify program JSON, close issues, update health, create reports, upload documents, or operate a web interface. Human CLI input currently drives state-changing workspace actions.
 

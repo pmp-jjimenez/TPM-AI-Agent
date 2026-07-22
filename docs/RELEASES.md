@@ -2,6 +2,23 @@
 
 This release history is based on the actual Git history available in the repository. Some commits do not carry explicit sprint numbers. Where exact sprint mapping is uncertain, that uncertainty is stated rather than inferred.
 
+## Structured Intelligence Result Contract v1 — US-56.1
+
+Replaced Workspace Intelligence's parallel string arrays with versioned categorized
+findings, structured recommendations, decisions required, and exactly one prioritized
+next action. Results carry bounded RFC 6901 evidence references and backend-owned,
+deterministic stable IDs. The existing single prompt and Gemini provider call use a
+strict provider DTO with index relationships; complete backend validation resolves those
+indexes to public IDs. Deterministic fallback uses the same final contract builder and
+evidence shape as AI output. The Executive Workspace validates and presents the nested
+contract without performing AI reasoning or fallback behavior.
+
+Intelligence remains explicitly generated, read-only, and non-persisted. This change
+does not introduce IntelligenceRun, evidence snapshot persistence, DecisionRecord or
+recommendation feedback persistence, PostgreSQL, authentication, knowledge-model
+entities, vector storage, autonomous agents, model training, retries, background jobs,
+or deployment changes.
+
 ## Workspace Intelligence Integration — US-55.5
 
 Implemented a read-only, explicitly generated intelligence area in the Executive

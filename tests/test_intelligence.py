@@ -14,11 +14,12 @@ if str(APP_DIR) not in sys.path:
     sys.path.insert(0, str(APP_DIR))
 
 import llm
-from intelligence import WorkspaceIntelligenceService, bounded_program_snapshot
+from intelligence import WorkspaceIntelligenceService, bounded_program_snapshot, extract_intelligence_evidence
 from intelligence_analysis import (
     MAX_ITEM_LENGTH,
     MAX_LIST_ITEMS,
     IntelligenceAnalysisError,
+    finalize_intelligence_analysis,
     parse_intelligence_analysis,
 )
 
@@ -36,15 +37,20 @@ PROGRAM = {
     "next_actions": [{"description": "Stored action", "status": "Open"}],
 }
 
-AI_RESPONSE = json.dumps({
+PROVIDER_RESULT = {
     "summary": "Grounded AI summary",
-    "attention_items": ["Review the stored issue"],
-    "risks": ["Stored delivery risk"],
-    "missing_information": ["Sponsor"],
-    "recommended_actions": ["Internal Technical Kickoff"],
     "confidence": "High",
+    "findings": [
+        {"category": "risk", "statement": "Stored delivery risk", "confidence": "High", "evidence_refs": ["/risks/0"], "impact": "Delivery may be affected."},
+        {"category": "fact", "statement": "The program is in initiation.", "confidence": "High", "evidence_refs": ["/phase"]},
+    ],
+    "recommendations": [{"priority": "High", "statement": "Conduct the Internal Technical Kickoff.", "rationale": "The initiation phase requires alignment.", "evidence_refs": ["/phase"], "related_finding_indexes": [1]}],
+    "decisions_required": [{"priority": "Medium", "statement": "Confirm risk treatment.", "reason": "The recorded risk needs direction.", "related_finding_indexes": [0], "related_recommendation_indexes": []}],
+    "next_action": {"priority": "High", "statement": "Schedule the Internal Technical Kickoff.", "rationale": "It is the highest-priority supported action.", "related_finding_indexes": [1], "related_recommendation_indexes": [0]},
     "limitations": [],
-})
+}
+AI_RESPONSE = json.dumps(PROVIDER_RESULT)
+EVIDENCE_CATALOG = extract_intelligence_evidence(PROGRAM)[1]
 
 
 def fixed_clock():
@@ -71,6 +77,7 @@ class IntelligenceServiceTests(unittest.TestCase):
         self.assertEqual(router.call_count, 1)
         self.assertEqual(PROGRAM, original)
         self.assertEqual(result["source"], "ai")
+        self.assertEqual(result["schema_version"], "1.0.0")
         self.assertEqual(result["generated_at"], "2026-07-17T12:00:00+00:00")
         self.assertEqual(result["routing"]["primary_persona"], {
             "id": "technical_program_manager", "display_name": "Technical Program Manager"
@@ -78,21 +85,35 @@ class IntelligenceServiceTests(unittest.TestCase):
         self.assertEqual(result["routing"]["supporting_personas"][0]["id"], "delivery_manager")
         self.assertNotIn("reasons", result["routing"])
         self.assertEqual(set(result), {
-            "program_id", "generated_at", "source", "routing", "summary",
-            "attention_items", "risks", "missing_information",
-            "recommended_actions", "confidence", "limitations",
+            "program_id", "generated_at", "source", "routing", "schema_version", "summary",
+            "findings", "recommendations", "decisions_required", "next_action", "confidence", "limitations",
         })
+        self.assertRegex(result["findings"][0]["id"], r"^fnd_[0-9a-f]{16}$")
+        self.assertEqual(result["recommendations"][0]["related_finding_ids"], [result["findings"][1]["id"]])
+        self.assertNotIn("related_finding_indexes", result["recommendations"][0])
 
     def test_missing_configuration_returns_grounded_fallback(self):
         provider = Mock(side_effect=llm.ProviderExecutionError("missing_configuration"))
         result = WorkspaceIntelligenceService(provider, fixed_clock, fixed_router).generate(PROGRAM)
 
         self.assertEqual(result["source"], "deterministic_fallback")
-        self.assertEqual(result["risks"], ["Stored delivery risk"])
-        self.assertEqual(result["attention_items"], ["Stored issue"])
-        self.assertIn("Sponsor", result["missing_information"])
-        self.assertIn("Internal Technical Kickoff", result["recommended_actions"])
+        self.assertIn("risk", [item["category"] for item in result["findings"]])
+        self.assertIn("missing_information", [item["category"] for item in result["findings"]])
+        self.assertEqual(result["findings"][0]["evidence_refs"], ["/risks/0"])
+        self.assertEqual(result["next_action"]["statement"], "Conduct the Internal Technical Kickoff.")
+        self.assertEqual(result["next_action"]["related_recommendation_ids"], [result["recommendations"][0]["id"]])
+        self.assertEqual(len([result["next_action"]]), 1)
         self.assertIn("grounded deterministic intelligence", result["limitations"][0])
+
+    def test_ai_and_fallback_share_the_same_required_contract(self):
+        ai = WorkspaceIntelligenceService(Mock(return_value=AI_RESPONSE), fixed_clock, fixed_router).generate(PROGRAM)
+        fallback = WorkspaceIntelligenceService(Mock(side_effect=llm.ProviderExecutionError("missing_configuration")), fixed_clock, fixed_router).generate(PROGRAM)
+        self.assertEqual(set(ai), set(fallback))
+        self.assertEqual(set(ai["next_action"]), set(fallback["next_action"]))
+        self.assertEqual(set(ai["recommendations"][0]), set(fallback["recommendations"][0]))
+        required_finding_fields = {"id", "category", "statement", "confidence", "evidence_refs"}
+        self.assertTrue(required_finding_fields.issubset(ai["findings"][0]))
+        self.assertTrue(required_finding_fields.issubset(fallback["findings"][0]))
 
     def test_timeout_and_provider_failures_return_fallback(self):
         for kind in ("timeout", "transport_failure", "provider_failure", "empty_response", "malformed_provider_response"):
@@ -103,22 +124,86 @@ class IntelligenceServiceTests(unittest.TestCase):
                 self.assertEqual(provider.call_count, 1)
 
     def test_malformed_analysis_returns_complete_fallback(self):
-        for response in ("not json", "{}", json.dumps({**json.loads(AI_RESPONSE), "confidence": "Certain"})):
+        malformed = deepcopy(PROVIDER_RESULT)
+        malformed["recommendations"][0].pop("rationale")
+        for response in ("not json", "{}", json.dumps({**PROVIDER_RESULT, "confidence": "Certain"}), json.dumps(malformed)):
             with self.subTest(response=response):
                 result = WorkspaceIntelligenceService(Mock(return_value=response), fixed_clock, fixed_router).generate(PROGRAM)
                 self.assertEqual(result["source"], "deterministic_fallback")
                 self.assertNotEqual(result["summary"], "Grounded AI summary")
 
     def test_parser_rejects_unsupported_fields_and_bounds(self):
-        parsed = json.loads(AI_RESPONSE)
+        parsed = deepcopy(PROVIDER_RESULT)
         with self.assertRaises(IntelligenceAnalysisError):
-            parse_intelligence_analysis(json.dumps({**parsed, "extra": "unsupported"}))
+            parse_intelligence_analysis(json.dumps({**parsed, "extra": "unsupported"}), EVIDENCE_CATALOG)
         with self.assertRaises(IntelligenceAnalysisError):
-            parse_intelligence_analysis(json.dumps({**parsed, "risks": ["x"] * (MAX_LIST_ITEMS + 1)}))
+            parse_intelligence_analysis(json.dumps({**parsed, "findings": parsed["findings"] * (MAX_LIST_ITEMS + 1)}), EVIDENCE_CATALOG)
         with self.assertRaises(IntelligenceAnalysisError):
-            parse_intelligence_analysis(json.dumps({**parsed, "risks": ["x" * (MAX_ITEM_LENGTH + 1)]}))
+            bad = deepcopy(parsed); bad["findings"][0]["statement"] = "x" * (MAX_ITEM_LENGTH + 1)
+            parse_intelligence_analysis(json.dumps(bad), EVIDENCE_CATALOG)
         with self.assertRaises(IntelligenceAnalysisError):
-            parse_intelligence_analysis(json.dumps({**parsed, "risks": [""]}))
+            bad = deepcopy(parsed); bad["findings"][0]["extra"] = "unsupported"
+            parse_intelligence_analysis(json.dumps(bad), EVIDENCE_CATALOG)
+
+    def test_parser_supports_all_categories_and_enums(self):
+        parsed = deepcopy(PROVIDER_RESULT)
+        parsed["findings"] = [
+            {"category": category, "statement": f"Finding {category}", "confidence": confidence, "evidence_refs": []}
+            for category, confidence in zip(
+                ("fact", "missing_information", "assumption", "risk", "dependency", "conflict"),
+                ("High", "Medium", "Low", "High", "Medium", "Low"),
+            )
+        ]
+        parsed["recommendations"] = [
+            {"priority": priority, "statement": f"Recommendation {priority}", "rationale": f"Rationale {priority}", "evidence_refs": [], "related_finding_indexes": []}
+            for priority in ("Critical", "High", "Medium", "Low")
+        ]
+        parsed["decisions_required"] = []
+        parsed["next_action"]["related_finding_indexes"] = []
+        parsed["next_action"]["related_recommendation_indexes"] = []
+        result = finalize_intelligence_analysis(parsed, EVIDENCE_CATALOG)
+        self.assertEqual({item["category"] for item in result["findings"]}, {"fact", "missing_information", "assumption", "risk", "dependency", "conflict"})
+        self.assertEqual({item["priority"] for item in result["recommendations"]}, {"Critical", "High", "Medium", "Low"})
+
+    def test_parser_rejects_invalid_evidence_relationships_duplicates_and_provider_ids(self):
+        mutations = []
+        for mutate in (
+            lambda value: value["findings"][0].update(evidence_refs=["/secret"]),
+            lambda value: value["findings"][0].update(evidence_refs=["/risks/0", "/risks/0"]),
+            lambda value: value["recommendations"][0].update(related_finding_indexes=[99]),
+            lambda value: value["recommendations"][0].update(related_finding_indexes=[1, 1]),
+            lambda value: value["findings"][0].update(id="fnd_provider"),
+            lambda value: value["findings"].append({"category": "RISK".lower(), "statement": "  stored   delivery RISK ", "confidence": "High", "evidence_refs": []}),
+        ):
+            value = deepcopy(PROVIDER_RESULT); mutate(value); mutations.append(value)
+        for value in mutations:
+            with self.subTest(value=value), self.assertRaises(IntelligenceAnalysisError):
+                finalize_intelligence_analysis(value, EVIDENCE_CATALOG)
+
+    def test_empty_or_omitted_evidence_is_not_referenceable(self):
+        _snapshot, catalog = extract_intelligence_evidence(PROGRAM)
+        self.assertNotIn("/sponsor", catalog)
+        bad = deepcopy(PROVIDER_RESULT); bad["findings"][0]["evidence_refs"] = ["/sponsor"]
+        with self.assertRaises(IntelligenceAnalysisError):
+            finalize_intelligence_analysis(bad, catalog)
+
+    def test_ids_are_normalized_deterministic_and_semantically_sensitive(self):
+        first = finalize_intelligence_analysis(deepcopy(PROVIDER_RESULT), EVIDENCE_CATALOG)
+        normalized = deepcopy(PROVIDER_RESULT)
+        normalized["findings"][0]["statement"] = "  STORED   delivery risk  "
+        second = finalize_intelligence_analysis(normalized, EVIDENCE_CATALOG)
+        different = deepcopy(PROVIDER_RESULT); different["findings"][0]["statement"] = "Different risk"
+        third = finalize_intelligence_analysis(different, EVIDENCE_CATALOG)
+        self.assertEqual(first["findings"][0]["id"], second["findings"][0]["id"])
+        self.assertNotEqual(first["findings"][0]["id"], third["findings"][0]["id"])
+
+    def test_colliding_short_digests_extend_deterministically(self):
+        parsed = deepcopy(PROVIDER_RESULT)
+        parsed["findings"].append({"category": "fact", "statement": "Another fact", "confidence": "High", "evidence_refs": []})
+        with patch("intelligence_analysis._digest", side_effect=["a" * 16 + "b" * 48, "a" * 16 + "c" * 48, "d" * 64, "e" * 64, "f" * 64, "1" * 64]):
+            result = finalize_intelligence_analysis(parsed, EVIDENCE_CATALOG)
+        self.assertEqual(len(result["findings"][0]["id"].split("_")[1]), 24)
+        self.assertEqual(len(result["findings"][1]["id"].split("_")[1]), 24)
 
     def test_bounded_snapshot_omits_arbitrary_and_limits_content(self):
         snapshot = bounded_program_snapshot({
@@ -131,6 +216,13 @@ class IntelligenceServiceTests(unittest.TestCase):
         self.assertEqual(len(snapshot["description"]), 1000)
         self.assertEqual(len(snapshot["risks"]), 20)
         self.assertTrue(all(len(item) <= 500 for item in snapshot["risks"]))
+
+    def test_evidence_catalog_uses_only_nonempty_bounded_snapshot_values(self):
+        snapshot, catalog = extract_intelligence_evidence({**PROGRAM, "customer": "", "dependencies": ["Vendor", ""]})
+        self.assertEqual(snapshot["dependencies"], ["Vendor", ""])
+        self.assertIn("/dependencies/0", catalog)
+        self.assertNotIn("/dependencies/1", catalog)
+        self.assertNotIn("/customer", catalog)
 
     def test_service_does_not_call_persistence_or_write_sessions(self):
         with patch("intelligence.load_core_context", return_value="context"), \

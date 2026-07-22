@@ -42,6 +42,7 @@ class ControlledIntelligenceService:
     def generate(self, program):
         return {
             "program_id": program["program_id"],
+            "schema_version": "1.0.0",
             "generated_at": "2026-07-17T12:00:00+00:00",
             "source": "ai",
             "routing": {
@@ -50,11 +51,11 @@ class ControlledIntelligenceService:
                 "supporting_personas": [{"id": "delivery_manager", "display_name": "Delivery Manager"}],
             },
             "summary": "Controlled intelligence",
-            "attention_items": [],
-            "risks": [],
-            "missing_information": [],
-            "recommended_actions": [],
             "confidence": "High",
+            "findings": [{"id": "fnd_1111111111111111", "category": "fact", "statement": "Controlled fact", "confidence": "High", "evidence_refs": ["/phase"]}],
+            "recommendations": [{"id": "rec_2222222222222222", "priority": "High", "statement": "Controlled recommendation", "rationale": "Controlled rationale", "evidence_refs": ["/phase"], "related_finding_ids": ["fnd_1111111111111111"]}],
+            "decisions_required": [{"id": "dec_3333333333333333", "priority": "Medium", "statement": "Controlled decision", "reason": "Controlled reason", "related_finding_ids": ["fnd_1111111111111111"], "related_recommendation_ids": []}],
+            "next_action": {"id": "act_4444444444444444", "priority": "High", "statement": "Controlled next action", "rationale": "Controlled rationale", "related_finding_ids": ["fnd_1111111111111111"], "related_recommendation_ids": ["rec_2222222222222222"]},
             "limitations": [],
         }
 
@@ -123,6 +124,9 @@ class APITests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["source"], "ai")
         self.assertEqual(response.json()["summary"], "Controlled intelligence")
+        self.assertEqual(response.json()["schema_version"], "1.0.0")
+        self.assertEqual(response.json()["findings"][0]["category"], "fact")
+        self.assertNotIn("related_finding_indexes", response.text)
         self.assertNotIn("reasons", response.json()["routing"])
 
     def test_missing_program_intelligence_returns_structured_404(self):
@@ -189,6 +193,9 @@ class APITests(unittest.TestCase):
         self.assertEqual(set(paths["/health"]), {"get"})
         self.assertEqual(set(paths["/programs"]), {"get"})
         self.assertEqual(set(paths["/programs/{programId}"]), {"get"})
+        schemas = response.json()["components"]["schemas"]
+        self.assertIn("IntelligenceFinding", schemas)
+        self.assertIn("IntelligenceNextAction", schemas)
 
     def test_swagger_ui_is_available(self):
         response = self.client.get("/docs")
