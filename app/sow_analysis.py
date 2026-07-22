@@ -1,8 +1,8 @@
 import json
 from copy import deepcopy
 
-from schema import create_program_record, generate_item_id
-from program_domain import DomainSource, create_action
+from schema import create_program_record
+from program_domain import DomainSource, create_action, create_risk
 
 
 ANALYSIS_VERSION = "1.0.0"
@@ -120,12 +120,11 @@ def map_analysis_to_program(analysis):
     for risk in snapshot.get("risks") or []:
         description = _item_description(risk)
         if description:
-            program["risks"].append({
-                "risk_id": generate_item_id("risk"),
-                "description": description,
-                "status": "Open",
-                "source": "SOW analysis",
-            })
+            program["risks"].append(create_risk(
+                description,
+                source=DomainSource.SOW_ANALYSIS,
+                lifecycle_phase=program.get("phase"),
+            ).to_dict())
 
     actions = []
     recommended = _string(snapshot.get("recommended_next_action"))

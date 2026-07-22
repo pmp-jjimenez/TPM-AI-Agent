@@ -262,15 +262,15 @@ training, background jobs, retries, or deployment behavior.
 
 ## Program Domain Foundation
 
-Program Schema `1.1.0` introduces the first implemented portion of the approved
+Program Schema `1.2.0` evolves the implemented portion of the approved
 Program Domain Model in `app/program_domain.py`. The module is framework-neutral:
 it imports no FastAPI, transport model, SQLAlchemy, React, or provider code.
 
 `ProgramEntity` defines stable UUID identity, entity type, title, optional
-description and owner, lifecycle relevance, and closed audit metadata. `Action` is
-the first adopted entity and adds its own controlled status, priority, due date,
-completion timestamp, and completion summary. Other program collections retain
-their existing shapes and are not migrated by this foundation.
+description and owner, lifecycle relevance, and closed audit metadata. `Action` adds
+controlled execution and completion data. `Risk` reuses the same foundation and adds
+closed status, probability, impact, human-assigned priority, treatment, review, and
+acceptance fields. Issue and Dependency retain their existing shapes.
 
 New CLI and SOW Actions receive UUIDv4 identities. Compatibility loading accepts
 legacy strings, dictionaries, and `action_id` values and produces the same
@@ -279,14 +279,21 @@ UUIDv5 import identities derived from program, collection position, and the lega
 payload. Loading deep-copies and never rewrites source JSON; explicit save writes
 the canonical representation.
 
+New CLI and SOW Risks also receive UUIDv4 identities. Legacy Risk strings and partial
+dictionaries accept `risk_id`, text/status/owner aliases, `due_date` as review date,
+and `severity` as treatment priority. Missing IDs use collection-specific repeatable
+UUIDv5 identities. Aggregate object identity is unique across Actions and Risks.
+
 Programs also contain a closed `relationships` collection of typed source/target
 references. Aggregate validation enforces unique object and relationship IDs,
 known endpoints, no self-reference, and no duplicate typed edges. US-56.2 adds no
 relationship inference, traversal, or UI.
 
-The Intelligence Contract remains `1.0.0`. Bounded extraction reads canonical
-Action titles through its existing compatibility projection, so public responses,
-evidence references, semantic IDs, strict parsing, and fallback remain unchanged.
+The Intelligence Contract remains `1.0.0`. Bounded extraction reads canonical Action
+and Risk titles without adding public fields. Risk evidence is internally object-keyed
+as `/risksById/<UUID>/title`; this RFC 6901 pointer remains stable when the persisted
+Risk array is reordered. Public response keys, semantic IDs, strict parsing, and
+all-or-fallback behavior remain unchanged.
 
 Persona routing does not add Gemini calls. The system does not call one model per persona, simulate an expert debate, or claim independent autonomous agents were executed. The AI does not autonomously modify program JSON, close issues, update health, create reports, upload documents, or operate a web interface. Human CLI input currently drives state-changing workspace actions.
 

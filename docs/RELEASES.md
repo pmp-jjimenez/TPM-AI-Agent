@@ -2,6 +2,25 @@
 
 This release history is based on the actual Git history available in the repository. Some commits do not carry explicit sprint numbers. Where exact sprint mapping is uncertain, that uncertainty is stated rather than inferred.
 
+## RAID Adoption v1 — Risk Adoption — US-57.1
+
+Adopted stored Program risks as framework-neutral `Risk` entities using the existing
+`ProgramEntity`, ownership, lifecycle, audit, and UUID foundation. Program Schema
+`1.2.0` adds controlled risk status, probability, impact, and human-assigned priority,
+plus optional mitigation, contingency, review, and acceptance data. Accepted risks
+require both an acceptance rationale and accepting owner.
+
+New CLI and SOW risks use UUIDv4 identities. Legacy strings, partial dictionaries,
+`risk_id` values, display-case statuses, string owners, `due_date`, and `severity`
+normalize non-mutatingly into the canonical representation. Missing legacy identity
+uses deterministic UUIDv5; explicit save writes canonical Risk JSON. Aggregate identity
+and relationship validation now use the combined Action and Risk object registry.
+
+Workspace Intelligence still emits Contract v1 unchanged. Its bounded Risk projection
+uses object-keyed RFC 6901 evidence at `/risksById/<UUID>/title`, making a Risk pointer
+stable across array reordering. The API transports canonical Risks and the workspace
+strictly validates and renders stored Risk cards. Issue and Dependency are not adopted.
+
 ## Program Knowledge Model Foundation — US-56.2
 
 Introduced the framework-neutral `ProgramEntity`, owner, lifecycle, audit, UUID, and

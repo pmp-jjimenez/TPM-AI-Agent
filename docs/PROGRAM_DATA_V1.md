@@ -4,17 +4,17 @@ Program Data Foundation v1 introduces a small executable schema foundation for t
 
 ## What Was Implemented
 
-- A canonical program schema version: `1.0.0`.
+- A canonical program schema version, currently `1.2.0`.
 - Canonical defaults for new program records.
 - In-memory compatibility normalization for legacy JSON records.
 - Minimum validation before saving program records.
-- Stable generated IDs for newly created risks, issues, decisions, and next actions.
+- Canonical ProgramEntity-based Risks and Actions, with stable generated IDs for newly created items.
 - UTC ISO-8601 timestamps for program metadata.
 
 ## Deliberately Deferred
 
 - Full future domain entities such as customers, stakeholders, milestones, deliverables, readiness, AI assessments, and executive report entities.
-- Lowercase enum migration for phase, health, confidence, and item statuses.
+- Lowercase enum migration for phase, health, confidence, and non-adopted item statuses.
 - Automatic migration of existing files under `data/programs/`.
 - Backfilling IDs into old nested records during load.
 - Database persistence, multi-user audit, and hosted SaaS storage behavior.
@@ -25,7 +25,7 @@ New v1 program records contain:
 
 ```json
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.2.0",
   "program_id": "...",
   "program_name": "...",
   "description": "...",
@@ -62,14 +62,14 @@ Legacy records remain loadable even when they are missing:
 
 Compatibility defaults are applied to a normalized in-memory copy. Loading a legacy JSON file does not rewrite the source file merely because fields were missing.
 
-Older issues without `owner`, `due_date`, or `issue_id` remain supported by the workspace issue listing and close flows.
+Older issues without `owner`, `due_date`, or `issue_id` remain supported by the workspace issue listing and close flows. Legacy Risk strings and dictionaries normalize in memory into canonical Risks; read alone does not rewrite their source file.
 
 ## Validation Behavior
 
 Before saving, records are normalized and validated for the minimum v1 shape:
 
 - required identity fields must be non-empty strings;
-- `schema_version` must be `1.0.0`;
+- writers emit `schema_version` `1.2.0`;
 - phase, health, and confidence must be present strings;
 - collection fields must be lists;
 - metadata must exist with `created_at`, `updated_at`, and `source`.
@@ -80,12 +80,12 @@ Validation returns clear error messages. `save_program()` raises `ValueError` wi
 
 New workspace items receive standard-library UUID-based IDs:
 
-- `risk-<uuid>` for risks;
+- bare UUIDv4 `object_id` for newly created canonical Risks;
 - `issue-<uuid>` for issues;
 - `decision-<uuid>` for decisions;
 - `action-<uuid>` for next actions.
 
-IDs are generated only for newly created items. Legacy nested records are not backfilled during load.
+Legacy Risks without identity receive deterministic UUIDv5 runtime identity and are written canonically only on explicit save. Non-adopted legacy nested records are not backfilled during load.
 
 ## Timestamp Behavior
 
@@ -106,6 +106,6 @@ The application does not scan or rewrite every file under `data/programs/`. Exis
 
 - Validation is intentionally minimal and does not enforce full business rules.
 - Existing records may still contain older item shapes.
-- Status values remain current display strings such as `Open` and `Closed`.
-- Nested items do not yet have metadata.
+- Issue and Decision statuses remain current display strings such as `Open` and `Closed`; Risk and Action statuses are controlled lowercase values.
+- Non-adopted nested items do not yet have entity audit metadata.
 - Generated reports and session artifacts are not yet linked from the program record.

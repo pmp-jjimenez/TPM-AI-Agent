@@ -82,7 +82,7 @@ def bounded_program_snapshot(program):
         "architecture": _bounded_value(program.get("architecture")),
         "dependencies": _bounded_value(program.get("dependencies")),
         "governance": _bounded_value(program.get("governance")),
-        "risks": _descriptions(program.get("risks")),
+        "risksById": _bounded_risks(program.get("risks")),
         "issues": _descriptions(program.get("issues")),
         "next_actions": _descriptions(program.get("next_actions")),
     }
@@ -111,16 +111,16 @@ def _collect_evidence_paths(value, path, catalog):
 def deterministic_intelligence(program, routing, generated_at, bounded=None, evidence_catalog=None):
     if bounded is None or evidence_catalog is None:
         bounded, evidence_catalog = extract_intelligence_evidence(program)
-    risks = bounded["risks"]
+    risks = bounded["risksById"]
     issues = bounded["issues"]
     missing = [label for label, field in COMPLETENESS_FIELDS if not _has_value(program.get(field))]
     findings = []
     recommendations = []
     decisions = []
-    for index, risk in enumerate(risks):
+    for object_id, risk in risks.items():
         findings.append({
-            "category": "risk", "statement": risk, "confidence": "High",
-            "evidence_refs": [f"/risks/{index}"],
+            "category": "risk", "statement": risk["title"], "confidence": "High",
+            "evidence_refs": [f"/risksById/{_pointer_segment(object_id)}/title"],
         })
     for index, issue in enumerate(issues):
         findings.append({
@@ -239,6 +239,24 @@ def _descriptions(items):
         if len(result) == PROGRAM_LIST_LIMIT:
             break
     return result
+
+
+def _bounded_risks(items):
+    result = {}
+    for item in items if isinstance(items, list) else []:
+        if not isinstance(item, dict):
+            continue
+        object_id = _text(item.get("object_id"))
+        title = _text(item.get("title"))
+        if object_id and title:
+            result[object_id] = {"title": title[:500]}
+        if len(result) == PROGRAM_LIST_LIMIT:
+            break
+    return result
+
+
+def _pointer_segment(value):
+    return str(value).replace("~", "~0").replace("/", "~1")
 
 
 def _has_value(value):

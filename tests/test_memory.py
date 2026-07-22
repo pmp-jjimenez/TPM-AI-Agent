@@ -18,6 +18,27 @@ from schema import CURRENT_SCHEMA_VERSION
 
 
 class ProgramMemoryTests(unittest.TestCase):
+    def test_legacy_risk_load_is_non_mutating_and_explicit_save_is_canonical(self):
+        original_data_dir = memory.DATA_DIR
+        with tempfile.TemporaryDirectory() as temp_dir:
+            memory.DATA_DIR = Path(temp_dir) / "programs"
+            memory.ensure_data_dir()
+            path = memory.program_file("legacy-risk")
+            legacy = {"program_id": "legacy-risk", "program_name": "Legacy Risk", "description": "Compatibility", "risks": [{"description": "Vendor approval may slip", "status": "Open"}]}
+            path.write_text(json.dumps(legacy, indent=2), encoding="utf-8")
+            before = path.read_text(encoding="utf-8")
+            try:
+                first = memory.load_program("legacy-risk")
+                second = memory.load_program("legacy-risk")
+                self.assertEqual(path.read_text(encoding="utf-8"), before)
+                self.assertEqual(first["risks"], second["risks"])
+                self.assertEqual(first["risks"][0]["object_type"], "risk")
+                memory.save_program(first)
+                saved = json.loads(path.read_text(encoding="utf-8"))
+                self.assertEqual(saved["risks"], first["risks"])
+                self.assertNotIn("risk_id", saved["risks"][0])
+            finally:
+                memory.DATA_DIR = original_data_dir
     def test_legacy_actions_load_deterministically_without_rewrite_and_save_canonically(self):
         original_data_dir = memory.DATA_DIR
 
@@ -48,7 +69,7 @@ class ProgramMemoryTests(unittest.TestCase):
 
                 self.assertEqual(program_path.read_text(encoding="utf-8"), before)
                 self.assertEqual(first, second)
-                self.assertEqual(first["schema_version"], "1.1.0")
+                self.assertEqual(first["schema_version"], CURRENT_SCHEMA_VERSION)
                 self.assertEqual(first["next_actions"][0]["object_type"], "action")
                 self.assertEqual(first["next_actions"][0]["title"], "Confirm rollout cohort")
                 self.assertEqual(first["next_actions"][1]["owner"]["display_name"], "Operations")

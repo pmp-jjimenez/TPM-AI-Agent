@@ -3,7 +3,7 @@ from datetime import datetime
 from memory import load_program, save_program
 from executive import generate_executive_report
 from schema import generate_item_id
-from program_domain import create_action
+from program_domain import create_action, create_risk
 
 
 def show_summary(program):
@@ -27,11 +27,10 @@ def add_risk(program):
         print("Risk cannot be empty.")
         return
 
-    program["risks"].append({
-        "risk_id": generate_item_id("risk"),
-        "description": risk,
-        "status": "Open"
-    })
+    program["risks"].append(create_risk(
+        risk,
+        lifecycle_phase=program.get("phase"),
+    ).to_dict())
 
     save_program(program)
     print("\nRisk added successfully.")

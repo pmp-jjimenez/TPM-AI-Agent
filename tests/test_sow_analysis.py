@@ -3,6 +3,7 @@ import sys
 import unittest
 from copy import deepcopy
 from pathlib import Path
+from uuid import UUID
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -101,7 +102,9 @@ class SOWProgramMappingTests(unittest.TestCase):
         self.assertEqual(program["customer"], "Example Customer")
         self.assertEqual(program["description"], "Enable a supported platform rollout.")
         self.assertEqual(program["confidence"], "High")
-        self.assertTrue(program["risks"][0]["risk_id"].startswith("risk-"))
+        self.assertEqual(program["risks"][0]["object_type"], "risk")
+        self.assertEqual(UUID(program["risks"][0]["object_id"]).version, 4)
+        self.assertEqual(program["risks"][0]["audit"]["source"], "sow_analysis")
         self.assertTrue(all(item["object_type"] == "action" for item in program["next_actions"]))
         self.assertTrue(all(len(item["object_id"]) == 36 for item in program["next_actions"]))
         self.assertTrue(all(item["audit"]["source"] == "sow_analysis" for item in program["next_actions"]))

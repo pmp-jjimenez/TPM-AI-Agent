@@ -4,6 +4,7 @@ import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
+from uuid import UUID
 
 import sys
 
@@ -87,7 +88,8 @@ class WorkspaceIssueHelperTests(unittest.TestCase):
                 with patch("builtins.input", return_value="Action description"):
                     add_action(program)
 
-                self.assertTrue(program["risks"][0]["risk_id"].startswith("risk-"))
+                self.assertEqual(program["risks"][0]["object_type"], "risk")
+                self.assertEqual(UUID(program["risks"][0]["object_id"]).version, 4)
                 self.assertTrue(program["issues"][0]["issue_id"].startswith("issue-"))
                 self.assertTrue(
                     program["decisions"][0]["decision_id"].startswith("decision-")

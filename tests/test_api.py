@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -10,7 +11,7 @@ from backend.api.main import app
 
 
 CONTROLLED_PROGRAM = {
-    "schema_version": "1.1.0",
+    "schema_version": "1.2.0",
     "program_id": "controlled-program",
     "program_name": "Controlled Program",
     "description": "Program fixture isolated from repository persistence.",
@@ -18,7 +19,15 @@ CONTROLLED_PROGRAM = {
     "phase": "Program Initiation",
     "health": "Green",
     "confidence": "High",
-    "risks": [],
+    "risks": [{
+        "object_id": "22222222-2222-4222-8222-222222222222",
+        "object_type": "risk", "title": "Controlled stored risk", "description": None,
+        "owner": None, "lifecycle_phase": "initiation",
+        "audit": {"created_at": None, "updated_at": None, "source": "legacy_import"},
+        "status": "open", "probability": None, "impact": None, "priority": None,
+        "mitigation_plan": None, "contingency_plan": None, "review_date": None,
+        "acceptance_rationale": None, "accepted_by": None,
+    }],
     "issues": [],
     "decisions": [],
     "next_actions": [{
@@ -116,6 +125,31 @@ class APITests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), CONTROLLED_PROGRAM)
+        self.assertEqual(response.json()["risks"][0]["object_type"], "risk")
+
+    def test_legacy_risk_transport_is_deterministic(self):
+        path = memory.program_file("legacy-risk")
+        path.write_text(json.dumps({
+            "program_id": "legacy-risk", "program_name": "Legacy Risk",
+            "description": "Compatibility fixture", "risks": ["Vendor approval may slip"],
+        }), encoding="utf-8")
+        first = self.client.get("/programs/legacy-risk")
+        second = self.client.get("/programs/legacy-risk")
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(first.json()["risks"], second.json()["risks"])
+        self.assertEqual(first.json()["risks"][0]["object_type"], "risk")
+
+    def test_malformed_stored_risk_returns_sanitized_error(self):
+        path = memory.program_file("malformed-risk")
+        path.write_text(json.dumps({
+            "program_id": "malformed-risk", "program_name": "Malformed Risk",
+            "description": "Invalid persisted fixture",
+            "risks": [{"description": "Risk", "status": "invented"}],
+        }), encoding="utf-8")
+        response = self.client.get("/programs/malformed-risk")
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json()["error"]["code"], "program_persistence_error")
+        self.assertNotIn("invented", response.text)
 
     def test_missing_program_returns_structured_404(self):
         response = self.client.get("/programs/unknown-program")

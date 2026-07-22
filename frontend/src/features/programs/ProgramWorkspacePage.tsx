@@ -13,7 +13,7 @@ import {
   StatusCard,
 } from './ExecutiveWorkspaceComponents';
 import { getProgram, getProgramIntelligence } from './programApi';
-import type { IntelligenceResponse, ProgramAction, ProgramRecord } from './programTypes';
+import type { IntelligenceResponse, ProgramAction, ProgramRecord, ProgramRisk } from './programTypes';
 import { usableText } from './programTypes';
 
 interface Milestone { date?: string; title: string; description?: string; status?: string }
@@ -33,6 +33,7 @@ function milestones(program: ProgramRecord): Milestone[] {
 }
 
 function storedActions(program: ProgramRecord): ProgramAction[] { return program.next_actions ?? []; }
+function storedRisks(program: ProgramRecord): ProgramRisk[] { return program.risks ?? []; }
 
 function displayDate(value: unknown): string | undefined {
   const text = usableText(value);
@@ -142,6 +143,7 @@ export function ProgramWorkspacePage() {
 
   const timeline = milestones(program);
   const actions = storedActions(program);
+  const risks = storedRisks(program);
 
   return (
     <PageContainer>
@@ -214,6 +216,27 @@ export function ProgramWorkspacePage() {
                       .filter(Boolean).map((detail) => <Typography key={detail} variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>{detail}</Typography>)}
                   </Paper>
                 )) : <Typography color="text.secondary">No stored program actions are available.</Typography>}
+          </Stack>
+        </WorkspaceSection>
+
+        <WorkspaceSection title="Stored Risks" description="Canonical risks explicitly persisted with the program.">
+          <Stack spacing={1.5}>
+            {risks.length ? risks.map((risk) => (
+              <Paper key={risk.object_id} variant="outlined" sx={{ p: 2 }}>
+                <Typography fontWeight={600}>{risk.title}</Typography>
+                {[
+                  `Status: ${risk.status}`,
+                  risk.owner && `Owner: ${risk.owner.display_name}`,
+                  risk.probability && `Probability: ${risk.probability}`,
+                  risk.impact && `Impact: ${risk.impact}`,
+                  risk.priority && `Priority: ${risk.priority}`,
+                  risk.review_date && `Review date: ${risk.review_date}`,
+                  risk.mitigation_plan && `Mitigation: ${risk.mitigation_plan}`,
+                  risk.status === 'accepted' && risk.accepted_by && `Accepted by: ${risk.accepted_by.display_name}`,
+                  risk.status === 'accepted' && risk.acceptance_rationale && `Acceptance rationale: ${risk.acceptance_rationale}`,
+                ].filter(Boolean).map((detail) => <Typography key={String(detail)} variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>{detail}</Typography>)}
+              </Paper>
+            )) : <Typography color="text.secondary">No stored program risks are available.</Typography>}
           </Stack>
         </WorkspaceSection>
 

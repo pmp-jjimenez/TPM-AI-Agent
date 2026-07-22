@@ -7,6 +7,7 @@ export interface ProgramRecord {
   health?: string;
   confidence?: string;
   milestones?: unknown[];
+  risks?: ProgramRisk[];
   next_actions?: ProgramAction[];
   sponsor?: unknown;
   budget?: unknown;
@@ -39,6 +40,29 @@ export interface ProgramAction {
   completed_at: string | null;
   completion_summary: string | null;
   audit: { created_at: string | null; updated_at: string | null; source: 'manual' | 'cli' | 'sow_analysis' | 'legacy_import' | 'api' };
+}
+
+export type ProgramRiskStatus = 'open' | 'monitoring' | 'mitigating' | 'accepted' | 'closed';
+export type ProgramRiskProbability = 'low' | 'medium' | 'high';
+export type ProgramRiskLevel = 'low' | 'medium' | 'high' | 'critical';
+
+export interface ProgramRisk {
+  object_id: string;
+  object_type: 'risk';
+  title: string;
+  description: string | null;
+  owner: { display_name: string; stakeholder_id: string | null } | null;
+  lifecycle_phase: 'discovery' | 'initiation' | 'planning' | 'execution' | 'readiness_go_live' | 'transition_handoff' | 'operations_closure' | null;
+  audit: { created_at: string | null; updated_at: string | null; source: 'manual' | 'cli' | 'sow_analysis' | 'legacy_import' | 'api' };
+  status: ProgramRiskStatus;
+  probability: ProgramRiskProbability | null;
+  impact: ProgramRiskLevel | null;
+  priority: ProgramRiskLevel | null;
+  mitigation_plan: string | null;
+  contingency_plan: string | null;
+  review_date: string | null;
+  acceptance_rationale: string | null;
+  accepted_by: { display_name: string; stakeholder_id: string | null } | null;
 }
 
 export interface IntelligencePersona { id: string; display_name: string }
@@ -98,6 +122,9 @@ export function parseProgram(value: unknown): ProgramRecord | null {
   const metadata = record.metadata && typeof record.metadata === 'object' && !Array.isArray(record.metadata)
     ? record.metadata as ProgramRecord['metadata']
     : undefined;
+  const parsedRisks = Array.isArray(record.risks) ? parseArray(record.risks, parseProgramRisk) : undefined;
+  if (Array.isArray(record.risks) && !parsedRisks) return null;
+  const risks = parsedRisks ?? undefined;
 
   return {
     ...record,
@@ -109,6 +136,7 @@ export function parseProgram(value: unknown): ProgramRecord | null {
     health: usableText(record.health),
     confidence: usableText(record.confidence),
     milestones: Array.isArray(record.milestones) ? record.milestones : undefined,
+    risks,
     next_actions: Array.isArray(record.next_actions) ? parseArray(record.next_actions, parseProgramAction) ?? undefined : undefined,
     meeting_history: Array.isArray(record.meeting_history) ? record.meeting_history : undefined,
     metadata,
@@ -136,6 +164,48 @@ function parseProgramAction(value: unknown): ProgramAction | null {
   if (audit.created_at !== null && !usableText(audit.created_at)) return null;
   if (audit.updated_at !== null && !usableText(audit.updated_at)) return null;
   return record as unknown as ProgramAction;
+}
+
+function parseProgramRisk(value: unknown): ProgramRisk | null {
+  const record = objectRecord(value);
+  const fields = ['object_id', 'object_type', 'title', 'description', 'owner', 'lifecycle_phase', 'audit', 'status', 'probability', 'impact', 'priority', 'mitigation_plan', 'contingency_plan', 'review_date', 'acceptance_rationale', 'accepted_by'];
+  if (!record || !exactKeys(record, fields)) return null;
+  if (typeof record.object_id !== 'string' || !uuidPattern.test(record.object_id) || record.object_type !== 'risk' || !usableText(record.title)) return null;
+  if (record.description !== null && !usableText(record.description)) return null;
+  if (!['open', 'monitoring', 'mitigating', 'accepted', 'closed'].includes(record.status as string)) return null;
+  if (record.probability !== null && !['low', 'medium', 'high'].includes(record.probability as string)) return null;
+  if (record.impact !== null && !['low', 'medium', 'high', 'critical'].includes(record.impact as string)) return null;
+  if (record.priority !== null && !['low', 'medium', 'high', 'critical'].includes(record.priority as string)) return null;
+  if (record.lifecycle_phase !== null && !['discovery', 'initiation', 'planning', 'execution', 'readiness_go_live', 'transition_handoff', 'operations_closure'].includes(record.lifecycle_phase as string)) return null;
+  for (const field of ['mitigation_plan', 'contingency_plan', 'acceptance_rationale'] as const) if (record[field] !== null && !usableText(record[field])) return null;
+  if (record.review_date !== null && !isIsoDate(record.review_date)) return null;
+  const owner = parseOwner(record.owner);
+  const acceptedBy = parseOwner(record.accepted_by);
+  if ((record.owner !== null && !owner) || (record.accepted_by !== null && !acceptedBy)) return null;
+  if (record.status === 'accepted' && (!usableText(record.acceptance_rationale) || !acceptedBy)) return null;
+  const audit = objectRecord(record.audit);
+  if (!audit || !exactKeys(audit, ['created_at', 'updated_at', 'source']) || !['manual', 'cli', 'sow_analysis', 'legacy_import', 'api'].includes(audit.source as string)) return null;
+  if (audit.created_at !== null && !isIsoDatetime(audit.created_at)) return null;
+  if (audit.updated_at !== null && !isIsoDatetime(audit.updated_at)) return null;
+  return record as unknown as ProgramRisk;
+}
+
+function parseOwner(value: unknown): Record<string, unknown> | null {
+  if (value === null) return null;
+  const owner = objectRecord(value);
+  if (!owner || !exactKeys(owner, ['display_name', 'stakeholder_id']) || !usableText(owner.display_name)) return null;
+  if (owner.stakeholder_id !== null && (typeof owner.stakeholder_id !== 'string' || !uuidPattern.test(owner.stakeholder_id))) return null;
+  return owner;
+}
+
+function isIsoDate(value: unknown): value is string {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}
+
+function isIsoDatetime(value: unknown): value is string {
+  return typeof value === 'string' && /(?:Z|[+-]\d{2}:\d{2})$/.test(value) && !Number.isNaN(Date.parse(value));
 }
 
 export function parseProgramList(value: unknown): ProgramRecord[] {

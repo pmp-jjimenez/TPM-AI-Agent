@@ -58,7 +58,7 @@ Top Risks
 
         for risk in program["risks"]:
 
-            report += f"- {risk['description']}\n"
+            report += f"- {risk.get('title') or risk.get('description') or 'Risk details unavailable'}\n"
 
     else:
 

@@ -2,17 +2,46 @@
   "program_id": "microsoft-teams-latam",
   "program_name": "Microsoft Teams LATAM",
   "description": "Microsoft Teams deployment for 8000 users in Mexico, Colombia and Chile.",
+  "schema_version": "1.2.0",
+  "customer": "",
   "phase": "Program Initiation",
   "health": "Unknown",
   "confidence": "Medium",
   "risks": [
     {
-      "description": "Adoption risk in Colombia due to limited change management readiness.",
-      "status": "Open"
+      "object_id": "677bb04b-5b41-5156-b05d-e1bb9bd8a53d",
+      "object_type": "risk",
+      "title": "Adoption risk in Colombia due to limited change management readiness.",
+      "description": null,
+      "owner": null,
+      "lifecycle_phase": null,
+      "audit": {
+        "created_at": null,
+        "updated_at": null,
+        "source": "legacy_import"
+      },
+      "status": "open",
+      "probability": null,
+      "impact": null,
+      "priority": null,
+      "mitigation_plan": null,
+      "contingency_plan": null,
+      "review_date": null,
+      "acceptance_rationale": null,
+      "accepted_by": null
     }
   ],
   "issues": [],
   "decisions": [],
   "next_actions": [],
-  "last_update": null
+  "meeting_history": [],
+  "documents": [],
+  "artifacts": [],
+  "relationships": [],
+  "last_update": null,
+  "metadata": {
+    "created_at": null,
+    "updated_at": null,
+    "source": "cli"
+  }
 }

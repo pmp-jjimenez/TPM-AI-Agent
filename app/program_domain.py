@@ -44,6 +44,34 @@ class ActionPriority(str, Enum):
     CRITICAL = "critical"
 
 
+class RiskStatus(str, Enum):
+    OPEN = "open"
+    MONITORING = "monitoring"
+    MITIGATING = "mitigating"
+    ACCEPTED = "accepted"
+    CLOSED = "closed"
+
+
+class RiskProbability(str, Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+class RiskImpact(str, Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class RiskPriority(str, Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
 class RelationshipType(str, Enum):
     RELATES_TO = "relates_to"
     BLOCKS = "blocks"
@@ -53,6 +81,7 @@ class RelationshipType(str, Enum):
     SUPPORTS = "supports"
     RESULTS_FROM = "results_from"
     SUPERSEDES = "supersedes"
+    REALIZED_AS = "realized_as"
 
 
 class DomainSource(str, Enum):
@@ -154,6 +183,47 @@ class Action(ProgramEntity):
 
 
 @dataclass(frozen=True)
+class Risk(ProgramEntity):
+    status: RiskStatus
+    probability: Optional[RiskProbability]
+    impact: Optional[RiskImpact]
+    priority: Optional[RiskPriority]
+    mitigation_plan: Optional[str]
+    contingency_plan: Optional[str]
+    review_date: Optional[str]
+    acceptance_rationale: Optional[str]
+    accepted_by: Optional[OwnerReference]
+
+    def __post_init__(self):
+        super().__post_init__()
+        if self.object_type != "risk":
+            raise DomainValidationError("object_type must be 'risk'")
+        _optional_text(self.mitigation_plan, "mitigation_plan")
+        _optional_text(self.contingency_plan, "contingency_plan")
+        _optional_date(self.review_date, "review_date")
+        _optional_text(self.acceptance_rationale, "acceptance_rationale")
+        if self.status == RiskStatus.ACCEPTED:
+            if self.acceptance_rationale is None:
+                raise DomainValidationError("acceptance_rationale is required when status is accepted")
+            if self.accepted_by is None:
+                raise DomainValidationError("accepted_by is required when status is accepted")
+
+    def to_dict(self):
+        return {
+            **self._base_dict(),
+            "status": self.status.value,
+            "probability": self.probability.value if self.probability else None,
+            "impact": self.impact.value if self.impact else None,
+            "priority": self.priority.value if self.priority else None,
+            "mitigation_plan": self.mitigation_plan,
+            "contingency_plan": self.contingency_plan,
+            "review_date": self.review_date,
+            "acceptance_rationale": self.acceptance_rationale,
+            "accepted_by": self.accepted_by.to_dict() if self.accepted_by else None,
+        }
+
+
+@dataclass(frozen=True)
 class ProgramRelationship:
     relationship_id: str
     relationship_type: RelationshipType
@@ -200,6 +270,28 @@ def create_action(title, source=DomainSource.CLI, **values):
         completed_at=values.get("completed_at"),
         completion_summary=values.get("completion_summary"),
         audit=AuditMetadata(now, now, _enum(DomainSource, source, "audit.source")),
+    )
+
+
+def create_risk(title, source=DomainSource.CLI, **values):
+    now = utc_timestamp()
+    return Risk(
+        object_id=str(uuid4()),
+        object_type="risk",
+        title=title,
+        description=values.get("description"),
+        owner=_owner(values.get("owner")),
+        lifecycle_phase=_optional_phase(values.get("lifecycle_phase")),
+        audit=AuditMetadata(now, now, _enum(DomainSource, source, "audit.source")),
+        status=_enum(RiskStatus, values.get("status", RiskStatus.OPEN), "status"),
+        probability=_optional_enum(RiskProbability, values.get("probability"), "probability"),
+        impact=_optional_enum(RiskImpact, values.get("impact"), "impact"),
+        priority=_optional_enum(RiskPriority, values.get("priority"), "priority"),
+        mitigation_plan=values.get("mitigation_plan"),
+        contingency_plan=values.get("contingency_plan"),
+        review_date=values.get("review_date"),
+        acceptance_rationale=values.get("acceptance_rationale"),
+        accepted_by=_owner(values.get("accepted_by"), "accepted_by"),
     )
 
 
@@ -256,6 +348,64 @@ def normalize_action(value, program_id, index):
         raise DomainValidationError(f"{path}: {error}") from error
 
 
+def normalize_risk(value, program_id, index):
+    """Normalize one legacy or canonical Risk without mutating its source."""
+    path = f"risks[{index}]"
+    if isinstance(value, str):
+        record = {"title": value}
+    elif isinstance(value, dict):
+        record = dict(value)
+    else:
+        raise DomainValidationError(f"{path} must be a string or object")
+
+    title = _first_text(record, "title", "description", "risk", "name")
+    if not title:
+        raise DomainValidationError(f"{path} must contain non-empty risk text")
+
+    object_id = _legacy_risk_object_id(record, program_id, index, value)
+    canonical = "object_id" in record or record.get("object_type") == "risk"
+    if canonical:
+        _exact_fields(record, {
+            "object_id", "object_type", "title", "description", "owner",
+            "lifecycle_phase", "audit", "status", "probability", "impact",
+            "priority", "mitigation_plan", "contingency_plan", "review_date",
+            "acceptance_rationale", "accepted_by",
+        }, path)
+        if record.get("object_type") != "risk":
+            raise DomainValidationError(f"{path}.object_type must be 'risk'")
+
+    audit_value = record.get("audit") if canonical else None
+    audit = _audit(audit_value, f"{path}.audit") if audit_value is not None else AuditMetadata(
+        None, None, _legacy_source(record.get("source"))
+    )
+    review_date = record.get("review_date", record.get("due_date"))
+    priority = record.get("priority", record.get("severity"))
+    try:
+        return Risk(
+            object_id=object_id,
+            object_type="risk",
+            title=title,
+            description=_clean_optional(record.get("description")) if canonical else None,
+            owner=_owner(record.get("owner"), f"{path}.owner"),
+            lifecycle_phase=_optional_phase(record.get("lifecycle_phase"), f"{path}.lifecycle_phase"),
+            audit=audit,
+            status=_legacy_risk_status(record.get("status", "open"), f"{path}.status"),
+            probability=_optional_enum(RiskProbability, record.get("probability"), f"{path}.probability"),
+            impact=_optional_enum(RiskImpact, record.get("impact"), f"{path}.impact"),
+            priority=_optional_enum(RiskPriority, priority, f"{path}.priority"),
+            mitigation_plan=_clean_optional(record.get("mitigation_plan")),
+            contingency_plan=_clean_optional(record.get("contingency_plan")),
+            review_date=_clean_optional(review_date),
+            acceptance_rationale=_clean_optional(record.get("acceptance_rationale")),
+            accepted_by=_owner(record.get("accepted_by"), f"{path}.accepted_by"),
+        )
+    except DomainValidationError as error:
+        message = str(error)
+        if message.startswith(f"{path}."):
+            raise
+        raise DomainValidationError(f"{path}: {error}") from error
+
+
 def normalize_relationship(value, index):
     path = f"relationships[{index}]"
     if not isinstance(value, dict):
@@ -278,18 +428,26 @@ def normalize_relationship(value, index):
 
 
 def normalize_program_entities(program):
-    """Return canonical Action and relationship dictionaries for one Program."""
+    """Return canonical adopted entities and relationships for one Program."""
     program_id = program.get("program_id") if isinstance(program, dict) else ""
     actions = [
         normalize_action(value, program_id, index)
         for index, value in enumerate(program.get("next_actions", []))
     ]
+    risks = [
+        normalize_risk(value, program_id, index)
+        for index, value in enumerate(program.get("risks", []))
+    ]
     relationships = [
         normalize_relationship(value, index)
         for index, value in enumerate(program.get("relationships", []))
     ]
-    validate_object_identity(actions, relationships)
-    return [item.to_dict() for item in actions], [item.to_dict() for item in relationships]
+    validate_object_identity([*actions, *risks], relationships)
+    return (
+        [item.to_dict() for item in actions],
+        [item.to_dict() for item in risks],
+        [item.to_dict() for item in relationships],
+    )
 
 
 def validate_object_identity(entities, relationships):
@@ -332,6 +490,19 @@ def _legacy_object_id(record, program_id, index, original):
     return str(uuid5(LEGACY_IMPORT_NAMESPACE, f"{program_id}|next_actions|{index}|{payload}"))
 
 
+def _legacy_risk_object_id(record, program_id, index, original):
+    candidate = record.get("object_id") or record.get("risk_id")
+    if candidate:
+        try:
+            return str(UUID(str(candidate).removeprefix("risk-")))
+        except (ValueError, AttributeError) as error:
+            raise DomainValidationError(
+                f"risks[{index}].object_id must be a UUID or risk-UUID"
+            ) from error
+    payload = json.dumps(original, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return str(uuid5(LEGACY_IMPORT_NAMESPACE, f"{program_id}|risks|{index}|{payload}"))
+
+
 def _legacy_status(value, path):
     if isinstance(value, ActionStatus):
         return value
@@ -352,6 +523,19 @@ def _legacy_status(value, path):
         return aliases[value.strip().lower()]
     except KeyError as error:
         raise DomainValidationError(f"{path}.status is unsupported") from error
+
+
+def _legacy_risk_status(value, path):
+    if isinstance(value, RiskStatus):
+        return value
+    if not isinstance(value, str):
+        raise DomainValidationError(f"{path} is unsupported")
+    aliases = {item.value.replace("_", " "): item for item in RiskStatus}
+    normalized = " ".join(value.strip().lower().replace("_", " ").split())
+    try:
+        return aliases[normalized]
+    except KeyError as error:
+        raise DomainValidationError(f"{path} is unsupported") from error
 
 
 def _legacy_source(value):

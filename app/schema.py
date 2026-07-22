@@ -5,7 +5,8 @@ from uuid import uuid4
 from program_domain import DomainValidationError, normalize_program_entities
 
 
-CURRENT_SCHEMA_VERSION = "1.1.0"
+CURRENT_SCHEMA_VERSION = "1.2.0"
+SUPPORTED_SCHEMA_VERSIONS = (None, "1.0.0", "1.1.0", CURRENT_SCHEMA_VERSION)
 
 DEFAULT_PHASE = "Program Initiation"
 DEFAULT_HEALTH = "Unknown"
@@ -62,7 +63,7 @@ def create_program_record(program_id, program_name, description, source=DEFAULT_
 def apply_compatibility_defaults(program):
     normalized = deepcopy(program) if isinstance(program, dict) else {}
 
-    if normalized.get("schema_version") in (None, "1.0.0"):
+    if normalized.get("schema_version") in SUPPORTED_SCHEMA_VERSIONS:
         normalized["schema_version"] = CURRENT_SCHEMA_VERSION
     normalized.setdefault("program_id", "")
     normalized.setdefault("program_name", "")
@@ -86,10 +87,11 @@ def apply_compatibility_defaults(program):
     normalized["metadata"] = metadata
 
     try:
-        actions, relationships = normalize_program_entities(normalized)
+        actions, risks, relationships = normalize_program_entities(normalized)
     except DomainValidationError as error:
         raise ValueError(f"Invalid Program domain data: {error}") from error
     normalized["next_actions"] = actions
+    normalized["risks"] = risks
     normalized["relationships"] = relationships
 
     return normalized

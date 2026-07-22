@@ -15,15 +15,15 @@ from prompt_builder import build_new_program_prompt, build_workspace_intelligenc
 class PromptBuilderTests(unittest.TestCase):
     def test_workspace_prompt_defines_contract_v1_safety_and_evidence_rules(self):
         prompt = build_workspace_intelligence_prompt(
-            {"phase": "Program Initiation", "risks": ["Stored risk"]},
-            ("/phase", "/risks/0"),
+            {"phase": "Program Initiation", "risksById": {"risk-id": {"title": "Stored risk"}}},
+            ("/phase", "/risksById/risk-id/title"),
             "TPM context.",
             {"primary_persona": "technical_program_manager", "supporting_personas": [], "reasons": [], "routing_version": "1.0.0"},
         )
         for concept in ("findings", "recommendations", "decisions_required", "next_action", "missing_information", "assumption", "dependency", "conflict", "Critical", "related_finding_indexes"):
             self.assertIn(concept, prompt)
         self.assertIn('"/phase"', prompt)
-        self.assertIn('"/risks/0"', prompt)
+        self.assertIn('"/risksById/risk-id/title"', prompt)
         self.assertIn("zero-based", prompt)
         self.assertIn("Do not generate IDs", prompt)
         self.assertIn("Do not disclose chain-of-thought", prompt)

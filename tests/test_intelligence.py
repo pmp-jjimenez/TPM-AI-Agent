@@ -24,6 +24,16 @@ from intelligence_analysis import (
 )
 
 
+RISK_ID = "22222222-2222-4222-8222-222222222222"
+RISK_POINTER = f"/risksById/{RISK_ID}/title"
+CANONICAL_RISK = {
+    "object_id": RISK_ID, "object_type": "risk", "title": "Stored delivery risk",
+    "description": None, "owner": None, "lifecycle_phase": "initiation",
+    "audit": {"created_at": None, "updated_at": None, "source": "legacy_import"},
+    "status": "open", "probability": None, "impact": None, "priority": None,
+    "mitigation_plan": None, "contingency_plan": None, "review_date": None,
+    "acceptance_rationale": None, "accepted_by": None,
+}
 PROGRAM = {
     "program_id": "controlled-program",
     "program_name": "Controlled Program",
@@ -32,7 +42,7 @@ PROGRAM = {
     "phase": "Program Initiation",
     "health": "Green",
     "confidence": "High",
-    "risks": [{"description": "Stored delivery risk", "status": "Open"}],
+    "risks": [CANONICAL_RISK],
     "issues": [{"description": "Stored issue", "status": "Open"}],
     "next_actions": [{"description": "Stored action", "status": "Open"}],
 }
@@ -41,7 +51,7 @@ PROVIDER_RESULT = {
     "summary": "Grounded AI summary",
     "confidence": "High",
     "findings": [
-        {"category": "risk", "statement": "Stored delivery risk", "confidence": "High", "evidence_refs": ["/risks/0"], "impact": "Delivery may be affected."},
+        {"category": "risk", "statement": "Stored delivery risk", "confidence": "High", "evidence_refs": [RISK_POINTER], "impact": "Delivery may be affected."},
         {"category": "fact", "statement": "The program is in initiation.", "confidence": "High", "evidence_refs": ["/phase"]},
     ],
     "recommendations": [{"priority": "High", "statement": "Conduct the Internal Technical Kickoff.", "rationale": "The initiation phase requires alignment.", "evidence_refs": ["/phase"], "related_finding_indexes": [1]}],
@@ -99,7 +109,7 @@ class IntelligenceServiceTests(unittest.TestCase):
         self.assertEqual(result["source"], "deterministic_fallback")
         self.assertIn("risk", [item["category"] for item in result["findings"]])
         self.assertIn("missing_information", [item["category"] for item in result["findings"]])
-        self.assertEqual(result["findings"][0]["evidence_refs"], ["/risks/0"])
+        self.assertEqual(result["findings"][0]["evidence_refs"], [RISK_POINTER])
         self.assertEqual(result["next_action"]["statement"], "Conduct the Internal Technical Kickoff.")
         self.assertEqual(result["next_action"]["related_recommendation_ids"], [result["recommendations"][0]["id"]])
         self.assertEqual(len([result["next_action"]]), 1)
@@ -169,7 +179,7 @@ class IntelligenceServiceTests(unittest.TestCase):
         mutations = []
         for mutate in (
             lambda value: value["findings"][0].update(evidence_refs=["/secret"]),
-            lambda value: value["findings"][0].update(evidence_refs=["/risks/0", "/risks/0"]),
+            lambda value: value["findings"][0].update(evidence_refs=[RISK_POINTER, RISK_POINTER]),
             lambda value: value["recommendations"][0].update(related_finding_indexes=[99]),
             lambda value: value["recommendations"][0].update(related_finding_indexes=[1, 1]),
             lambda value: value["findings"][0].update(id="fnd_provider"),
@@ -210,12 +220,20 @@ class IntelligenceServiceTests(unittest.TestCase):
             **PROGRAM,
             "secret": "must not enter prompt",
             "description": "x" * 5000,
-            "risks": [{"description": str(index) * 600} for index in range(30)],
+            "risks": [{**CANONICAL_RISK, "object_id": f"00000000-0000-4000-8000-{index:012d}", "title": str(index) * 600} for index in range(30)],
         })
         self.assertNotIn("secret", snapshot)
         self.assertEqual(len(snapshot["description"]), 1000)
-        self.assertEqual(len(snapshot["risks"]), 20)
-        self.assertTrue(all(len(item) <= 500 for item in snapshot["risks"]))
+        self.assertEqual(len(snapshot["risksById"]), 20)
+        self.assertTrue(all(len(item["title"]) <= 500 for item in snapshot["risksById"].values()))
+
+    def test_risk_evidence_is_object_keyed_and_stable_when_array_reorders(self):
+        second = {**CANONICAL_RISK, "object_id": "33333333-3333-4333-8333-333333333333", "title": "Second risk"}
+        first_snapshot, first_catalog = extract_intelligence_evidence({**PROGRAM, "risks": [CANONICAL_RISK, second]})
+        reordered_snapshot, reordered_catalog = extract_intelligence_evidence({**PROGRAM, "risks": [second, CANONICAL_RISK]})
+        self.assertEqual(first_snapshot["risksById"][RISK_ID], reordered_snapshot["risksById"][RISK_ID])
+        self.assertIn(RISK_POINTER, first_catalog)
+        self.assertIn(RISK_POINTER, reordered_catalog)
 
     def test_evidence_catalog_uses_only_nonempty_bounded_snapshot_values(self):
         snapshot, catalog = extract_intelligence_evidence({**PROGRAM, "customer": "", "dependencies": ["Vendor", ""]})

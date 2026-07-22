@@ -31,6 +31,16 @@ function canonicalAction(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function canonicalRisk(overrides: Record<string, unknown> = {}) {
+  return {
+    object_id: '22222222-2222-4222-8222-222222222222', object_type: 'risk', title: 'Stored delivery risk',
+    description: null, owner: null, lifecycle_phase: 'initiation',
+    audit: { created_at: null, updated_at: null, source: 'legacy_import' },
+    status: 'open', probability: null, impact: null, priority: null, mitigation_plan: null,
+    contingency_plan: null, review_date: null, acceptance_rationale: null, accepted_by: null, ...overrides,
+  };
+}
+
 const aiIntelligence = {
   schema_version: '1.0.0',
   program_id: 'alpha-program',
@@ -44,10 +54,10 @@ const aiIntelligence = {
   summary: 'Grounded AI intelligence summary.',
   confidence: 'High',
   findings: [
-    { id: 'fnd_1111111111111111', category: 'risk', statement: 'Stored delivery risk', confidence: 'High', evidence_refs: ['/risks/0'], impact: 'Delivery may be affected.' },
+    { id: 'fnd_1111111111111111', category: 'risk', statement: 'Stored delivery risk', confidence: 'High', evidence_refs: ['/risksById/22222222-2222-4222-8222-222222222222/title'], impact: 'Delivery may be affected.' },
     { id: 'fnd_2222222222222222', category: 'dependency', statement: 'Vendor delivery is required.', confidence: 'Medium', evidence_refs: ['/dependencies/0'] },
   ],
-  recommendations: [{ id: 'rec_3333333333333333', priority: 'High', statement: 'Review delivery plan', rationale: 'The recorded risk requires a controlled response.', evidence_refs: ['/risks/0'], related_finding_ids: ['fnd_1111111111111111'] }],
+  recommendations: [{ id: 'rec_3333333333333333', priority: 'High', statement: 'Review delivery plan', rationale: 'The recorded risk requires a controlled response.', evidence_refs: ['/risksById/22222222-2222-4222-8222-222222222222/title'], related_finding_ids: ['fnd_1111111111111111'] }],
   decisions_required: [{ id: 'dec_4444444444444444', priority: 'Medium', statement: 'Confirm risk treatment.', reason: 'Delivery direction is required.', related_finding_ids: ['fnd_1111111111111111'], related_recommendation_ids: ['rec_3333333333333333'] }],
   next_action: { id: 'act_5555555555555555', priority: 'High', statement: 'Review the delivery plan now.', rationale: 'This is the highest-priority supported action.', related_finding_ids: ['fnd_1111111111111111'], related_recommendation_ids: ['rec_3333333333333333'] },
   limitations: [],
@@ -177,7 +187,7 @@ describe('Program workspace', () => {
     expect(screen.getByText('Confirm risk treatment.')).toBeInTheDocument();
     expect(screen.getByText('Delivery direction is required.')).toBeInTheDocument();
     expect(screen.getByText('Review the delivery plan now.')).toBeInTheDocument();
-    expect(screen.getAllByText('Evidence: /risks/0')).toHaveLength(2);
+    expect(screen.getAllByText('Evidence: /risksById/22222222-2222-4222-8222-222222222222/title')).toHaveLength(2);
     expect(screen.getByText('1.0.0')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Refresh Intelligence' }));
     expect(await screen.findByText('Refreshed intelligence.')).toBeInTheDocument();
@@ -282,6 +292,33 @@ describe('Program workspace', () => {
     expect(screen.getByText('Status: open')).toBeInTheDocument();
     expect(screen.getByText('Owner: Operations')).toBeInTheDocument();
     expect(screen.getByText('Due: 2026-08-01')).toBeInTheDocument();
+  });
+
+  it('renders strict canonical stored risks and their optional treatment details', async () => {
+    mockFetchOnce({
+      ...alpha,
+      risks: [canonicalRisk({
+        owner: { display_name: 'Change Lead', stakeholder_id: null }, probability: 'high', impact: 'critical',
+        priority: 'high', review_date: '2026-08-15', mitigation_plan: 'Run readiness reviews',
+        status: 'accepted', acceptance_rationale: 'Exposure is within tolerance',
+        accepted_by: { display_name: 'Executive Sponsor', stakeholder_id: null },
+      })],
+    });
+    renderApp('/programs/alpha-program');
+    expect(await screen.findByRole('heading', { level: 2, name: 'Stored Risks' })).toBeInTheDocument();
+    expect(screen.getByText('Stored delivery risk')).toBeInTheDocument();
+    expect(screen.getByText('Owner: Change Lead')).toBeInTheDocument();
+    expect(screen.getByText('Probability: high')).toBeInTheDocument();
+    expect(screen.getByText('Impact: critical')).toBeInTheDocument();
+    expect(screen.getByText('Mitigation: Run readiness reviews')).toBeInTheDocument();
+    expect(screen.getByText('Accepted by: Executive Sponsor')).toBeInTheDocument();
+  });
+
+  it('rejects a malformed canonical stored risk payload', async () => {
+    mockFetchOnce({ ...alpha, risks: [canonicalRisk({ status: 'invented' })] });
+    renderApp('/programs/alpha-program');
+    expect(await screen.findByText('Program could not be loaded')).toBeInTheDocument();
+    expect(screen.queryByText('Stored delivery risk')).not.toBeInTheDocument();
   });
 
   it('declares single-column narrow breakpoints for executive status sections', async () => {
