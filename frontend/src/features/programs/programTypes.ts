@@ -7,7 +7,7 @@ export interface ProgramRecord {
   health?: string;
   confidence?: string;
   milestones?: unknown[];
-  next_actions?: unknown[];
+  next_actions?: ProgramAction[];
   sponsor?: unknown;
   budget?: unknown;
   target_go_live?: unknown;
@@ -21,6 +21,24 @@ export interface ProgramRecord {
     [key: string]: unknown;
   };
   [key: string]: unknown;
+}
+
+export type ProgramActionStatus = 'open' | 'in_progress' | 'blocked' | 'completed' | 'cancelled';
+export type ProgramActionPriority = 'low' | 'medium' | 'high' | 'critical';
+
+export interface ProgramAction {
+  object_id: string;
+  object_type: 'action';
+  title: string;
+  description: string | null;
+  status: ProgramActionStatus;
+  priority: ProgramActionPriority | null;
+  owner: { display_name: string; stakeholder_id: string | null } | null;
+  lifecycle_phase: 'discovery' | 'initiation' | 'planning' | 'execution' | 'readiness_go_live' | 'transition_handoff' | 'operations_closure' | null;
+  due_date: string | null;
+  completed_at: string | null;
+  completion_summary: string | null;
+  audit: { created_at: string | null; updated_at: string | null; source: 'manual' | 'cli' | 'sow_analysis' | 'legacy_import' | 'api' };
 }
 
 export interface IntelligencePersona { id: string; display_name: string }
@@ -91,10 +109,33 @@ export function parseProgram(value: unknown): ProgramRecord | null {
     health: usableText(record.health),
     confidence: usableText(record.confidence),
     milestones: Array.isArray(record.milestones) ? record.milestones : undefined,
-    next_actions: Array.isArray(record.next_actions) ? record.next_actions : undefined,
+    next_actions: Array.isArray(record.next_actions) ? parseArray(record.next_actions, parseProgramAction) ?? undefined : undefined,
     meeting_history: Array.isArray(record.meeting_history) ? record.meeting_history : undefined,
     metadata,
   };
+}
+
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function parseProgramAction(value: unknown): ProgramAction | null {
+  const record = objectRecord(value);
+  if (!record || !exactKeys(record, ['object_id', 'object_type', 'title', 'description', 'owner', 'lifecycle_phase', 'audit', 'status', 'priority', 'due_date', 'completed_at', 'completion_summary'])) return null;
+  if (typeof record.object_id !== 'string' || !uuidPattern.test(record.object_id) || record.object_type !== 'action' || !usableText(record.title)) return null;
+  if (record.description !== null && !usableText(record.description)) return null;
+  if (!['open', 'in_progress', 'blocked', 'completed', 'cancelled'].includes(record.status as string)) return null;
+  if (record.priority !== null && !['low', 'medium', 'high', 'critical'].includes(record.priority as string)) return null;
+  if (record.lifecycle_phase !== null && !['discovery', 'initiation', 'planning', 'execution', 'readiness_go_live', 'transition_handoff', 'operations_closure'].includes(record.lifecycle_phase as string)) return null;
+  if (record.due_date !== null && !usableText(record.due_date)) return null;
+  if (record.completed_at !== null && !usableText(record.completed_at)) return null;
+  if (record.completion_summary !== null && !usableText(record.completion_summary)) return null;
+  const owner = record.owner === null ? null : objectRecord(record.owner);
+  if (owner && (!exactKeys(owner, ['display_name', 'stakeholder_id']) || !usableText(owner.display_name) || (owner.stakeholder_id !== null && (typeof owner.stakeholder_id !== 'string' || !uuidPattern.test(owner.stakeholder_id))))) return null;
+  if (record.owner !== null && !owner) return null;
+  const audit = objectRecord(record.audit);
+  if (!audit || !exactKeys(audit, ['created_at', 'updated_at', 'source']) || !['manual', 'cli', 'sow_analysis', 'legacy_import', 'api'].includes(audit.source as string)) return null;
+  if (audit.created_at !== null && !usableText(audit.created_at)) return null;
+  if (audit.updated_at !== null && !usableText(audit.updated_at)) return null;
+  return record as unknown as ProgramAction;
 }
 
 export function parseProgramList(value: unknown): ProgramRecord[] {

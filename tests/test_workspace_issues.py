@@ -92,8 +92,10 @@ class WorkspaceIssueHelperTests(unittest.TestCase):
                 self.assertTrue(
                     program["decisions"][0]["decision_id"].startswith("decision-")
                 )
-                self.assertTrue(
-                    program["next_actions"][0]["action_id"].startswith("action-")
+                self.assertEqual(program["next_actions"][0]["object_type"], "action")
+                self.assertRegex(
+                    program["next_actions"][0]["object_id"],
+                    r"^[0-9a-f-]{36}$",
                 )
             finally:
                 memory.DATA_DIR = original_data_dir

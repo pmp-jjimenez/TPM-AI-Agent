@@ -224,6 +224,27 @@ class IntelligenceServiceTests(unittest.TestCase):
         self.assertNotIn("/dependencies/1", catalog)
         self.assertNotIn("/customer", catalog)
 
+    def test_canonical_action_preserves_contract_v1_bounded_description(self):
+        canonical = {
+            "object_id": "11111111-1111-4111-8111-111111111111",
+            "object_type": "action",
+            "title": "Stored action",
+            "description": None,
+            "owner": None,
+            "lifecycle_phase": "initiation",
+            "audit": {"created_at": None, "updated_at": None, "source": "legacy_import"},
+            "status": "open",
+            "priority": None,
+            "due_date": None,
+            "completed_at": None,
+            "completion_summary": None,
+        }
+        legacy_snapshot = bounded_program_snapshot(PROGRAM)
+        canonical_snapshot = bounded_program_snapshot({**PROGRAM, "next_actions": [canonical]})
+
+        self.assertEqual(canonical_snapshot["next_actions"], legacy_snapshot["next_actions"])
+        self.assertEqual(extract_intelligence_evidence({**PROGRAM, "next_actions": [canonical]})[1], EVIDENCE_CATALOG)
+
     def test_service_does_not_call_persistence_or_write_sessions(self):
         with patch("intelligence.load_core_context", return_value="context"), \
              patch("builtins.open") as open_file:

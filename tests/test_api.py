@@ -10,7 +10,7 @@ from backend.api.main import app
 
 
 CONTROLLED_PROGRAM = {
-    "schema_version": "1.0.0",
+    "schema_version": "1.1.0",
     "program_id": "controlled-program",
     "program_name": "Controlled Program",
     "description": "Program fixture isolated from repository persistence.",
@@ -21,10 +21,24 @@ CONTROLLED_PROGRAM = {
     "risks": [],
     "issues": [],
     "decisions": [],
-    "next_actions": [],
+    "next_actions": [{
+        "object_id": "11111111-1111-4111-8111-111111111111",
+        "object_type": "action",
+        "title": "Controlled stored action",
+        "description": None,
+        "owner": None,
+        "lifecycle_phase": "initiation",
+        "audit": {"created_at": None, "updated_at": None, "source": "legacy_import"},
+        "status": "open",
+        "priority": None,
+        "due_date": None,
+        "completed_at": None,
+        "completion_summary": None,
+    }],
     "meeting_history": [],
     "documents": [],
     "artifacts": [],
+    "relationships": [],
     "metadata": {
         "created_at": "2026-07-17T00:00:00+00:00",
         "updated_at": "2026-07-17T00:00:00+00:00",

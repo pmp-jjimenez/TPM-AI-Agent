@@ -2,6 +2,7 @@ import json
 from copy import deepcopy
 
 from schema import create_program_record, generate_item_id
+from program_domain import DomainSource, create_action
 
 
 ANALYSIS_VERSION = "1.0.0"
@@ -140,12 +141,11 @@ def map_analysis_to_program(analysis):
             actions.append(f"Resolve open question: {description}")
 
     for description in _unique(actions):
-        program["next_actions"].append({
-            "action_id": generate_item_id("action"),
-            "description": description,
-            "status": "Open",
-            "source": "SOW analysis",
-        })
+        program["next_actions"].append(create_action(
+            description,
+            source=DomainSource.SOW_ANALYSIS,
+            lifecycle_phase=program.get("phase"),
+        ).to_dict())
 
     filename = _string(snapshot.get("source_filename"))
     if filename:

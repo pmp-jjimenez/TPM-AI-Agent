@@ -3,6 +3,7 @@ from datetime import datetime
 from memory import load_program, save_program
 from executive import generate_executive_report
 from schema import generate_item_id
+from program_domain import create_action
 
 
 def show_summary(program):
@@ -159,11 +160,10 @@ def add_action(program):
         print("Action cannot be empty.")
         return
 
-    program["next_actions"].append({
-        "action_id": generate_item_id("action"),
-        "description": action,
-        "status": "Open"
-    })
+    program["next_actions"].append(create_action(
+        action,
+        lifecycle_phase=program.get("phase"),
+    ).to_dict())
 
     save_program(program)
     print("\nAction added successfully.")

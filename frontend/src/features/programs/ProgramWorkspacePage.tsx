@@ -13,12 +13,10 @@ import {
   StatusCard,
 } from './ExecutiveWorkspaceComponents';
 import { getProgram, getProgramIntelligence } from './programApi';
-import type { IntelligenceResponse, ProgramRecord } from './programTypes';
+import type { IntelligenceResponse, ProgramAction, ProgramRecord } from './programTypes';
 import { usableText } from './programTypes';
 
 interface Milestone { date?: string; title: string; description?: string; status?: string }
-interface StoredAction { description: string; status?: string; owner?: string; dueDate?: string }
-
 function milestones(program: ProgramRecord): Milestone[] {
   return (program.milestones ?? []).flatMap((entry) => {
     if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
@@ -34,21 +32,7 @@ function milestones(program: ProgramRecord): Milestone[] {
   });
 }
 
-function storedActions(program: ProgramRecord): StoredAction[] {
-  return (program.next_actions ?? []).flatMap((entry) => {
-    if (typeof entry === 'string') return entry.trim() ? [{ description: entry.trim() }] : [];
-    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
-    const record = entry as Record<string, unknown>;
-    const description = usableText(record.description) ?? usableText(record.action) ?? usableText(record.title) ?? usableText(record.name);
-    if (!description) return [];
-    return [{
-      description,
-      status: usableText(record.status),
-      owner: usableText(record.owner),
-      dueDate: usableText(record.due_date),
-    }];
-  });
-}
+function storedActions(program: ProgramRecord): ProgramAction[] { return program.next_actions ?? []; }
 
 function displayDate(value: unknown): string | undefined {
   const text = usableText(value);
@@ -223,10 +207,10 @@ export function ProgramWorkspacePage() {
 
         <WorkspaceSection title="Stored Program Actions" description="Actions persisted with the program; generated intelligence remains separate and read-only.">
           <Stack spacing={1.5}>
-                {actions.length ? actions.map((action, index) => (
-                  <Paper key={`${action.description}-${index}`} variant="outlined" sx={{ p: 2 }}>
-                    <Typography fontWeight={600}>{action.description}</Typography>
-                    {[action.status && `Status: ${action.status}`, action.owner && `Owner: ${action.owner}`, action.dueDate && `Due: ${action.dueDate}`]
+                {actions.length ? actions.map((action) => (
+                  <Paper key={action.object_id} variant="outlined" sx={{ p: 2 }}>
+                    <Typography fontWeight={600}>{action.title}</Typography>
+                    {[`Status: ${action.status}`, action.owner && `Owner: ${action.owner.display_name}`, action.due_date && `Due: ${action.due_date}`]
                       .filter(Boolean).map((detail) => <Typography key={detail} variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>{detail}</Typography>)}
                   </Paper>
                 )) : <Typography color="text.secondary">No stored program actions are available.</Typography>}

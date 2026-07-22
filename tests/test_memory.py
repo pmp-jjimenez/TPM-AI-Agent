@@ -18,6 +18,49 @@ from schema import CURRENT_SCHEMA_VERSION
 
 
 class ProgramMemoryTests(unittest.TestCase):
+    def test_legacy_actions_load_deterministically_without_rewrite_and_save_canonically(self):
+        original_data_dir = memory.DATA_DIR
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            memory.DATA_DIR = Path(temp_dir) / "programs"
+            memory.ensure_data_dir()
+            program_path = memory.program_file("legacy-actions")
+            legacy = {
+                "program_id": "legacy-actions",
+                "program_name": "Legacy Actions",
+                "description": "Normalize stored actions.",
+                "next_actions": [
+                    "Confirm rollout cohort",
+                    {
+                        "action": "Review support model",
+                        "status": "Open",
+                        "owner": "Operations",
+                        "due_date": "2026-08-01",
+                    },
+                ],
+            }
+            program_path.write_text(json.dumps(legacy, indent=2), encoding="utf-8")
+            before = program_path.read_text(encoding="utf-8")
+
+            try:
+                first = memory.load_program("legacy-actions")
+                second = memory.load_program("legacy-actions")
+
+                self.assertEqual(program_path.read_text(encoding="utf-8"), before)
+                self.assertEqual(first, second)
+                self.assertEqual(first["schema_version"], "1.1.0")
+                self.assertEqual(first["next_actions"][0]["object_type"], "action")
+                self.assertEqual(first["next_actions"][0]["title"], "Confirm rollout cohort")
+                self.assertEqual(first["next_actions"][1]["owner"]["display_name"], "Operations")
+
+                memory.save_program(first)
+                saved = json.loads(program_path.read_text(encoding="utf-8"))
+                self.assertEqual(saved["next_actions"], first["next_actions"])
+                self.assertEqual(saved["relationships"], [])
+                self.assertNotIn("action_id", saved["next_actions"][0])
+            finally:
+                memory.DATA_DIR = original_data_dir
+
     def test_create_save_and_reload_program_in_temporary_directory(self):
         original_data_dir = memory.DATA_DIR
 
@@ -86,6 +129,7 @@ class ProgramMemoryTests(unittest.TestCase):
                 self.assertEqual(loaded["meeting_history"], [])
                 self.assertEqual(loaded["documents"], [])
                 self.assertEqual(loaded["artifacts"], [])
+                self.assertEqual(loaded["relationships"], [])
                 self.assertEqual(loaded["metadata"]["source"], "cli")
                 self.assertNotIn("owner", loaded["issues"][0])
                 self.assertNotIn("due_date", loaded["issues"][0])
@@ -114,6 +158,7 @@ class ProgramMemoryTests(unittest.TestCase):
                 "meeting_history": [],
                 "documents": [],
                 "artifacts": [],
+                "relationships": [],
                 "metadata": {
                     "created_at": created_at,
                     "updated_at": first_updated,
@@ -179,6 +224,7 @@ class ProgramMemoryTests(unittest.TestCase):
                 self.assertEqual(program["meeting_history"], [])
                 self.assertEqual(program["documents"], [])
                 self.assertEqual(program["artifacts"], [])
+                self.assertEqual(program["relationships"], [])
 
                 with open(memory.program_file("legacy-sync"), "r", encoding="utf-8") as f:
                     saved = json.load(f)

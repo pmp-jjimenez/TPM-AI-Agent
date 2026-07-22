@@ -232,7 +232,7 @@ Stored facts and workspace recommendations remain distinct:
 - Health cards display only the API-provided phase, health, and confidence. A literal `Unknown` is retained as stored information and styled as uncertain, not erroneous.
 - The timeline reads only an explicit `milestones` collection and ignores malformed entries. `meeting_history` is not treated as milestone data. Because milestones are deferred from the canonical v1 schema, an empty milestone state is expected for current records.
 - Executive completeness checks direct values for sponsor, budget, target go-live, architecture, dependencies, and governance. Only absent, null, empty, or unusable values are missing; `Unknown` is a present value. These gaps are informational and are not converted into risks or issues.
-- Existing `next_actions` are rendered as stored program actions using defensive support for legacy strings and current object shapes. Generated recommendations, required decisions, and the primary next action remain visually and semantically separate from stored actions and are not persisted.
+- Existing `next_actions` are normalized by the backend into canonical Action entities before API transport. The browser validates that closed shape and uses `object_id` as presentation identity. Generated recommendations, required decisions, and the primary next action remain visually and semantically separate from stored actions and are not persisted.
 
 The browser performs transport validation and presentation only. Categorization, evidence validation, stable IDs, recommendation priority, decision requirements, next-action selection, and deterministic fallback remain backend responsibilities. Intelligence is generated only after explicit user action and is not persisted.
 
@@ -257,8 +257,36 @@ Workspace Intelligence uses its existing single prompt and single Gemini request
 does not store the prompt, provider response, evidence snapshot, or generated result.
 Its strict all-or-fallback parser does not request or retain chain-of-thought. Contract
 v1 does not add IntelligenceRun, DecisionRecord or feedback persistence, PostgreSQL,
-authentication, a Program Knowledge Model, vector storage, autonomous agents, model
+authentication, vector storage, autonomous agents, model
 training, background jobs, retries, or deployment behavior.
+
+## Program Domain Foundation
+
+Program Schema `1.1.0` introduces the first implemented portion of the approved
+Program Domain Model in `app/program_domain.py`. The module is framework-neutral:
+it imports no FastAPI, transport model, SQLAlchemy, React, or provider code.
+
+`ProgramEntity` defines stable UUID identity, entity type, title, optional
+description and owner, lifecycle relevance, and closed audit metadata. `Action` is
+the first adopted entity and adds its own controlled status, priority, due date,
+completion timestamp, and completion summary. Other program collections retain
+their existing shapes and are not migrated by this foundation.
+
+New CLI and SOW Actions receive UUIDv4 identities. Compatibility loading accepts
+legacy strings, dictionaries, and `action_id` values and produces the same
+canonical runtime Action representation. Items without identity receive repeatable
+UUIDv5 import identities derived from program, collection position, and the legacy
+payload. Loading deep-copies and never rewrites source JSON; explicit save writes
+the canonical representation.
+
+Programs also contain a closed `relationships` collection of typed source/target
+references. Aggregate validation enforces unique object and relationship IDs,
+known endpoints, no self-reference, and no duplicate typed edges. US-56.2 adds no
+relationship inference, traversal, or UI.
+
+The Intelligence Contract remains `1.0.0`. Bounded extraction reads canonical
+Action titles through its existing compatibility projection, so public responses,
+evidence references, semantic IDs, strict parsing, and fallback remain unchanged.
 
 Persona routing does not add Gemini calls. The system does not call one model per persona, simulate an expert debate, or claim independent autonomous agents were executed. The AI does not autonomously modify program JSON, close issues, update health, create reports, upload documents, or operate a web interface. Human CLI input currently drives state-changing workspace actions.
 
@@ -291,7 +319,7 @@ This layer is intentionally independent of Gemini. It does not call an AI model,
 
 - The browser supports read-only program browsing and workspace views; the CLI remains the interface for mutations.
 - Local JSON files are the only program persistence mechanism.
-- No schema migration framework; compatibility defaults provide additive legacy support.
+- No schema migration framework; compatibility normalization upgrades legacy Actions in memory and writes canonical data only on explicit save.
 - Automated coverage uses `unittest`, but there is no separate CI configuration in this repository.
 - The web interface calls the available read-only backend API but does not provide mutations.
 - No implemented Docker runtime.

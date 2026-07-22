@@ -42,6 +42,7 @@ class ProgramSchemaTests(unittest.TestCase):
             "meeting_history",
             "documents",
             "artifacts",
+            "relationships",
         ):
             self.assertEqual(program[field], [])
 
@@ -64,6 +65,7 @@ class ProgramSchemaTests(unittest.TestCase):
         self.assertEqual(normalized["meeting_history"], [])
         self.assertEqual(normalized["documents"], [])
         self.assertEqual(normalized["artifacts"], [])
+        self.assertEqual(normalized["relationships"], [])
         self.assertIn("metadata", normalized)
 
     def test_invalid_program_record_returns_clear_validation_errors(self):
@@ -82,6 +84,7 @@ class ProgramSchemaTests(unittest.TestCase):
             "meeting_history": [],
             "documents": [],
             "artifacts": [],
+            "relationships": [],
             "metadata": {"source": "cli"},
         })
 

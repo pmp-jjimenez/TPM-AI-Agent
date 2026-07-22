@@ -2,8 +2,10 @@ from copy import deepcopy
 from datetime import datetime, timezone
 from uuid import uuid4
 
+from program_domain import DomainValidationError, normalize_program_entities
 
-CURRENT_SCHEMA_VERSION = "1.0.0"
+
+CURRENT_SCHEMA_VERSION = "1.1.0"
 
 DEFAULT_PHASE = "Program Initiation"
 DEFAULT_HEALTH = "Unknown"
@@ -18,6 +20,7 @@ LIST_FIELDS = (
     "meeting_history",
     "documents",
     "artifacts",
+    "relationships",
 )
 
 
@@ -47,6 +50,7 @@ def create_program_record(program_id, program_name, description, source=DEFAULT_
         "meeting_history": [],
         "documents": [],
         "artifacts": [],
+        "relationships": [],
         "metadata": {
             "created_at": now,
             "updated_at": now,
@@ -58,7 +62,8 @@ def create_program_record(program_id, program_name, description, source=DEFAULT_
 def apply_compatibility_defaults(program):
     normalized = deepcopy(program) if isinstance(program, dict) else {}
 
-    normalized.setdefault("schema_version", CURRENT_SCHEMA_VERSION)
+    if normalized.get("schema_version") in (None, "1.0.0"):
+        normalized["schema_version"] = CURRENT_SCHEMA_VERSION
     normalized.setdefault("program_id", "")
     normalized.setdefault("program_name", "")
     normalized.setdefault("description", "")
@@ -79,6 +84,13 @@ def apply_compatibility_defaults(program):
     metadata.setdefault("updated_at", None)
     metadata.setdefault("source", DEFAULT_SOURCE)
     normalized["metadata"] = metadata
+
+    try:
+        actions, relationships = normalize_program_entities(normalized)
+    except DomainValidationError as error:
+        raise ValueError(f"Invalid Program domain data: {error}") from error
+    normalized["next_actions"] = actions
+    normalized["relationships"] = relationships
 
     return normalized
 
@@ -108,6 +120,12 @@ def validate_program(program):
     for field in LIST_FIELDS:
         if not isinstance(program.get(field), list):
             errors.append(f"{field} must be a list")
+
+    if not errors:
+        try:
+            normalize_program_entities(program)
+        except DomainValidationError as error:
+            errors.append(str(error))
 
     metadata = program.get("metadata")
     if not isinstance(metadata, dict):

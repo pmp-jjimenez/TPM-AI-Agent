@@ -2,6 +2,24 @@
 
 This release history is based on the actual Git history available in the repository. Some commits do not carry explicit sprint numbers. Where exact sprint mapping is uncertain, that uncertainty is stated rather than inferred.
 
+## Program Knowledge Model Foundation — US-56.2
+
+Introduced the framework-neutral `ProgramEntity`, owner, lifecycle, audit, UUID, and
+typed relationship primitives. Action is the first canonical Program entity, with
+closed status and priority vocabularies plus optional ownership, lifecycle, due-date,
+completion, and audit fields. New CLI and SOW Actions use UUIDv4 identity.
+
+Legacy action strings, dictionaries, and `action_id` values normalize into the same
+runtime representation. Missing legacy IDs receive deterministic UUIDv5 identities;
+loads remain non-mutating and explicit saves write Program Schema `1.1.0`. Aggregate
+validation enforces unique object identity and valid relationship endpoints. The
+frontend renders canonical Actions using `object_id` while the Intelligence Contract
+v1, its evidence paths, semantic IDs, prompt, provider, and fallback remain unchanged.
+
+This release does not migrate any entity other than Action and does not add PostgreSQL,
+authentication, migrations, relationship inference/UI, persistent intelligence, or
+new AI behavior.
+
 ## Structured Intelligence Result Contract v1 — US-56.1
 
 Replaced Workspace Intelligence's parallel string arrays with versioned categorized

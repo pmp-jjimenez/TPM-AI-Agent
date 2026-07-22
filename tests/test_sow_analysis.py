@@ -102,7 +102,9 @@ class SOWProgramMappingTests(unittest.TestCase):
         self.assertEqual(program["description"], "Enable a supported platform rollout.")
         self.assertEqual(program["confidence"], "High")
         self.assertTrue(program["risks"][0]["risk_id"].startswith("risk-"))
-        self.assertTrue(all(item["action_id"].startswith("action-") for item in program["next_actions"]))
+        self.assertTrue(all(item["object_type"] == "action" for item in program["next_actions"]))
+        self.assertTrue(all(len(item["object_id"]) == 36 for item in program["next_actions"]))
+        self.assertTrue(all(item["audit"]["source"] == "sow_analysis" for item in program["next_actions"]))
         self.assertEqual(program["documents"][0]["filename"], "fixture.pdf")
         self.assertNotIn("path", program["documents"][0])
 

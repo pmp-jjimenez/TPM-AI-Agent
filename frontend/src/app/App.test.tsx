@@ -13,6 +13,24 @@ const alpha = {
   metadata: { created_at: '2026-06-01T00:00:00Z', updated_at: '2026-07-17T00:00:00Z', source: 'test' },
 };
 
+function canonicalAction(overrides: Record<string, unknown> = {}) {
+  return {
+    object_id: '11111111-1111-4111-8111-111111111111',
+    object_type: 'action',
+    title: 'Confirm rollout cohort',
+    description: null,
+    status: 'open',
+    priority: null,
+    owner: null,
+    lifecycle_phase: 'initiation',
+    due_date: null,
+    completed_at: null,
+    completion_summary: null,
+    audit: { created_at: null, updated_at: null, source: 'legacy_import' },
+    ...overrides,
+  };
+}
+
 const aiIntelligence = {
   schema_version: '1.0.0',
   program_id: 'alpha-program',
@@ -246,9 +264,14 @@ describe('Program workspace', () => {
       ...alpha,
       phase: 'Program Initiation',
       next_actions: [
-        'Confirm rollout cohort',
-        { action: 'Review support model', status: 'Open', owner: 'Operations', due_date: '2026-08-01' },
-        { description: 7 },
+        canonicalAction(),
+        canonicalAction({
+          object_id: '22222222-2222-4222-8222-222222222222',
+          title: 'Review support model',
+          status: 'in_progress',
+          owner: { display_name: 'Operations', stakeholder_id: null },
+          due_date: '2026-08-01',
+        }),
       ],
     });
     renderApp('/programs/alpha-program');
@@ -256,7 +279,7 @@ describe('Program workspace', () => {
     const storedHeading = await screen.findByRole('heading', { level: 2, name: 'Stored Program Actions' });
     expect(storedHeading.compareDocumentPosition(screen.getByText('Confirm rollout cohort')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.queryByText('Internal Technical Kickoff')).not.toBeInTheDocument();
-    expect(screen.getByText('Status: Open')).toBeInTheDocument();
+    expect(screen.getByText('Status: open')).toBeInTheDocument();
     expect(screen.getByText('Owner: Operations')).toBeInTheDocument();
     expect(screen.getByText('Due: 2026-08-01')).toBeInTheDocument();
   });
