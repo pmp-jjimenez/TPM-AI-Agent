@@ -1,7 +1,7 @@
 """Framework-neutral Program Domain Model primitives.
 
-Action is the first adopted Program entity. Compatibility parsing belongs here so
-every application boundary receives the same canonical runtime representation.
+Adopted Program entities share this domain layer. Compatibility parsing belongs here
+so every application boundary receives the same canonical runtime representation.
 """
 
 from dataclasses import dataclass
@@ -66,6 +66,21 @@ class RiskImpact(str, Enum):
 
 
 class RiskPriority(str, Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class IssueStatus(str, Enum):
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    BLOCKED = "blocked"
+    RESOLVED = "resolved"
+    CLOSED = "closed"
+
+
+class IssueSeverity(str, Enum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -224,6 +239,39 @@ class Risk(ProgramEntity):
 
 
 @dataclass(frozen=True)
+class Issue(ProgramEntity):
+    status: IssueStatus
+    severity: Optional[IssueSeverity]
+    impact: Optional[str]
+    due_date: Optional[str]
+    resolution_summary: Optional[str]
+    resolved_at: Optional[str]
+    root_cause: Optional[str]
+
+    def __post_init__(self):
+        super().__post_init__()
+        if self.object_type != "issue":
+            raise DomainValidationError("object_type must be 'issue'")
+        _optional_text(self.impact, "impact")
+        _optional_date(self.due_date, "due_date")
+        _optional_text(self.resolution_summary, "resolution_summary")
+        _optional_utc_datetime(self.resolved_at, "resolved_at")
+        _optional_text(self.root_cause, "root_cause")
+
+    def to_dict(self):
+        return {
+            **self._base_dict(),
+            "status": self.status.value,
+            "severity": self.severity.value if self.severity else None,
+            "impact": self.impact,
+            "due_date": self.due_date,
+            "resolution_summary": self.resolution_summary,
+            "resolved_at": self.resolved_at,
+            "root_cause": self.root_cause,
+        }
+
+
+@dataclass(frozen=True)
 class ProgramRelationship:
     relationship_id: str
     relationship_type: RelationshipType
@@ -292,6 +340,21 @@ def create_risk(title, source=DomainSource.CLI, **values):
         review_date=values.get("review_date"),
         acceptance_rationale=values.get("acceptance_rationale"),
         accepted_by=_owner(values.get("accepted_by"), "accepted_by"),
+    )
+
+
+def create_issue(title, source=DomainSource.CLI, **values):
+    now = utc_timestamp()
+    return Issue(
+        object_id=str(uuid4()), object_type="issue", title=title,
+        description=values.get("description"), owner=_owner(values.get("owner")),
+        lifecycle_phase=_optional_phase(values.get("lifecycle_phase")),
+        audit=AuditMetadata(now, now, _enum(DomainSource, source, "audit.source")),
+        status=_enum(IssueStatus, values.get("status", IssueStatus.OPEN), "status"),
+        severity=_optional_enum(IssueSeverity, values.get("severity"), "severity"),
+        impact=values.get("impact"), due_date=values.get("due_date"),
+        resolution_summary=values.get("resolution_summary"),
+        resolved_at=values.get("resolved_at"), root_cause=values.get("root_cause"),
     )
 
 
@@ -406,6 +469,66 @@ def normalize_risk(value, program_id, index):
         raise DomainValidationError(f"{path}: {error}") from error
 
 
+def normalize_issue(value, program_id, index):
+    """Normalize one legacy or canonical Issue without mutating its source.
+
+    Legacy date-only ``resolved_date`` values use the explicit start-of-day UTC
+    policy (``YYYY-MM-DDT00:00:00+00:00``).
+    """
+    path = f"issues[{index}]"
+    if isinstance(value, str):
+        record = {"title": value}
+    elif isinstance(value, dict):
+        record = dict(value)
+    else:
+        raise DomainValidationError(f"{path} must be a string or object")
+    title = _first_text(record, "title", "description", "issue", "name")
+    if not title:
+        raise DomainValidationError(f"{path} must contain non-empty issue text")
+    object_id = _legacy_issue_object_id(record, program_id, index, value)
+    canonical = "object_id" in record or record.get("object_type") == "issue"
+    if canonical:
+        _exact_fields(record, {
+            "object_id", "object_type", "title", "description", "owner",
+            "lifecycle_phase", "audit", "status", "severity", "impact",
+            "due_date", "resolution_summary", "resolved_at", "root_cause",
+        }, path)
+        if record.get("object_type") != "issue":
+            raise DomainValidationError(f"{path}.object_type must be 'issue'")
+    audit_value = record.get("audit") if canonical else None
+    audit = _audit(audit_value, f"{path}.audit") if audit_value is not None else AuditMetadata(
+        None, None, _legacy_source(record.get("source"))
+    )
+    due_date = _clean_optional(record.get("due_date"))
+    resolved_at = record.get("resolved_at", record.get("resolved_date", record.get("closed_at")))
+    if "resolved_date" in record and "resolved_at" not in record:
+        raw = record.get("resolved_date")
+        if isinstance(raw, str) and len(raw) == 10:
+            _optional_date(raw, f"{path}.resolved_at")
+            resolved_at = f"{raw}T00:00:00+00:00"
+    resolved_at = _clean_optional(resolved_at)
+    _optional_date(due_date, f"{path}.due_date")
+    _optional_utc_datetime(resolved_at, f"{path}.resolved_at")
+    try:
+        return Issue(
+            object_id=object_id, object_type="issue", title=title,
+            description=_clean_optional(record.get("description")) if canonical else None,
+            owner=_owner(record.get("owner"), f"{path}.owner"),
+            lifecycle_phase=_optional_phase(record.get("lifecycle_phase"), f"{path}.lifecycle_phase"),
+            audit=audit,
+            status=_legacy_issue_status(record.get("status", "open"), f"{path}.status"),
+            severity=_optional_enum(IssueSeverity, record.get("severity"), f"{path}.severity"),
+            impact=_clean_optional(record.get("impact")), due_date=due_date,
+            resolution_summary=_clean_optional(record.get("resolution_summary", record.get("resolution"))),
+            resolved_at=resolved_at, root_cause=_clean_optional(record.get("root_cause")),
+        )
+    except DomainValidationError as error:
+        message = str(error)
+        if message.startswith(f"{path}."):
+            raise
+        raise DomainValidationError(f"{path}: {error}") from error
+
+
 def normalize_relationship(value, index):
     path = f"relationships[{index}]"
     if not isinstance(value, dict):
@@ -438,14 +561,19 @@ def normalize_program_entities(program):
         normalize_risk(value, program_id, index)
         for index, value in enumerate(program.get("risks", []))
     ]
+    issues = [
+        normalize_issue(value, program_id, index)
+        for index, value in enumerate(program.get("issues", []))
+    ]
     relationships = [
         normalize_relationship(value, index)
         for index, value in enumerate(program.get("relationships", []))
     ]
-    validate_object_identity([*actions, *risks], relationships)
+    validate_object_identity([*actions, *risks, *issues], relationships)
     return (
         [item.to_dict() for item in actions],
         [item.to_dict() for item in risks],
+        [item.to_dict() for item in issues],
         [item.to_dict() for item in relationships],
     )
 
@@ -455,6 +583,7 @@ def validate_object_identity(entities, relationships):
     if len(set(object_ids)) != len(object_ids):
         raise DomainValidationError("Program entity object_id values must be unique")
     known = set(object_ids)
+    entity_types = {entity.object_id: entity.object_type for entity in entities}
     relationship_ids = set()
     relationship_keys = set()
     for relationship in relationships:
@@ -464,6 +593,18 @@ def validate_object_identity(entities, relationships):
         if relationship.source_object_id not in known or relationship.target_object_id not in known:
             raise DomainValidationError(
                 f"relationship {relationship.relationship_id} references an unknown object_id"
+            )
+        source_type = entity_types[relationship.source_object_id]
+        target_type = entity_types[relationship.target_object_id]
+        required_types = {
+            RelationshipType.RESOLVES: ("action", "issue"),
+            RelationshipType.REALIZED_AS: ("risk", "issue"),
+            RelationshipType.RESULTS_FROM: ("issue", "risk"),
+        }
+        if relationship.relationship_type in required_types and (source_type, target_type) != required_types[relationship.relationship_type]:
+            expected = required_types[relationship.relationship_type]
+            raise DomainValidationError(
+                f"relationship {relationship.relationship_type.value} must be {expected[0]} -> {expected[1]}"
             )
         key = (
             relationship.relationship_type.value,
@@ -503,6 +644,19 @@ def _legacy_risk_object_id(record, program_id, index, original):
     return str(uuid5(LEGACY_IMPORT_NAMESPACE, f"{program_id}|risks|{index}|{payload}"))
 
 
+def _legacy_issue_object_id(record, program_id, index, original):
+    candidate = record.get("object_id") or record.get("issue_id")
+    if candidate:
+        try:
+            return str(UUID(str(candidate).removeprefix("issue-")))
+        except (ValueError, AttributeError) as error:
+            raise DomainValidationError(
+                f"issues[{index}].object_id must be a UUID or issue-UUID"
+            ) from error
+    payload = json.dumps(original, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return str(uuid5(LEGACY_IMPORT_NAMESPACE, f"{program_id}|issues|{index}|{payload}"))
+
+
 def _legacy_status(value, path):
     if isinstance(value, ActionStatus):
         return value
@@ -531,6 +685,24 @@ def _legacy_risk_status(value, path):
     if not isinstance(value, str):
         raise DomainValidationError(f"{path} is unsupported")
     aliases = {item.value.replace("_", " "): item for item in RiskStatus}
+    normalized = " ".join(value.strip().lower().replace("_", " ").split())
+    try:
+        return aliases[normalized]
+    except KeyError as error:
+        raise DomainValidationError(f"{path} is unsupported") from error
+
+
+def _legacy_issue_status(value, path):
+    if isinstance(value, IssueStatus):
+        return value
+    if not isinstance(value, str):
+        raise DomainValidationError(f"{path} is unsupported")
+    aliases = {
+        "open": IssueStatus.OPEN, "in progress": IssueStatus.IN_PROGRESS,
+        "blocked": IssueStatus.BLOCKED, "resolved": IssueStatus.RESOLVED,
+        "done": IssueStatus.RESOLVED, "completed": IssueStatus.RESOLVED,
+        "closed": IssueStatus.CLOSED,
+    }
     normalized = " ".join(value.strip().lower().replace("_", " ").split())
     try:
         return aliases[normalized]
@@ -659,6 +831,15 @@ def _optional_datetime(value, path):
         raise DomainValidationError(f"{path} must be an ISO datetime or null") from error
     if parsed.tzinfo is None:
         raise DomainValidationError(f"{path} must include a timezone")
+
+
+def _optional_utc_datetime(value, path):
+    _optional_datetime(value, path)
+    if value is None:
+        return
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if parsed.utcoffset() != timezone.utc.utcoffset(parsed):
+        raise DomainValidationError(f"{path} must be a UTC datetime or null")
 
 
 def _exact_fields(record, fields, path):

@@ -11,7 +11,7 @@ from backend.api.main import app
 
 
 CONTROLLED_PROGRAM = {
-    "schema_version": "1.2.0",
+    "schema_version": "1.3.0",
     "program_id": "controlled-program",
     "program_name": "Controlled Program",
     "description": "Program fixture isolated from repository persistence.",
@@ -28,7 +28,14 @@ CONTROLLED_PROGRAM = {
         "mitigation_plan": None, "contingency_plan": None, "review_date": None,
         "acceptance_rationale": None, "accepted_by": None,
     }],
-    "issues": [],
+    "issues": [{
+        "object_id": "44444444-4444-4444-8444-444444444444",
+        "object_type": "issue", "title": "Controlled stored issue", "description": None,
+        "owner": None, "lifecycle_phase": "initiation",
+        "audit": {"created_at": None, "updated_at": None, "source": "legacy_import"},
+        "status": "open", "severity": None, "impact": None, "due_date": None,
+        "resolution_summary": None, "resolved_at": None, "root_cause": None,
+    }],
     "decisions": [],
     "next_actions": [{
         "object_id": "11111111-1111-4111-8111-111111111111",
@@ -138,6 +145,33 @@ class APITests(unittest.TestCase):
         self.assertEqual(first.status_code, 200)
         self.assertEqual(first.json()["risks"], second.json()["risks"])
         self.assertEqual(first.json()["risks"][0]["object_type"], "risk")
+
+    def test_legacy_issue_transport_is_canonical_with_nullable_compatibility_fields(self):
+        path = memory.program_file("legacy-issue")
+        path.write_text(json.dumps({
+            "program_id": "legacy-issue", "program_name": "Legacy Issue",
+            "description": "Compatibility fixture", "issues": ["Vendor access unavailable"],
+        }), encoding="utf-8")
+        first = self.client.get("/programs/legacy-issue")
+        second = self.client.get("/programs/legacy-issue")
+        self.assertEqual(first.status_code, 200)
+        issue = first.json()["issues"][0]
+        self.assertEqual(issue, second.json()["issues"][0])
+        self.assertEqual(issue["object_type"], "issue")
+        self.assertIsNone(issue["owner"])
+        self.assertIsNone(issue["due_date"])
+
+    def test_malformed_stored_issue_returns_sanitized_error(self):
+        path = memory.program_file("malformed-issue")
+        path.write_text(json.dumps({
+            "program_id": "malformed-issue", "program_name": "Malformed Issue",
+            "description": "Invalid persisted fixture",
+            "issues": [{"issue": "Issue", "due_date": "secret malformed date"}],
+        }), encoding="utf-8")
+        response = self.client.get("/programs/malformed-issue")
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json()["error"]["code"], "program_persistence_error")
+        self.assertNotIn("secret malformed date", response.text)
 
     def test_malformed_stored_risk_returns_sanitized_error(self):
         path = memory.program_file("malformed-risk")

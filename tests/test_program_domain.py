@@ -24,15 +24,64 @@ from program_domain import (
     RiskPriority,
     RiskProbability,
     RiskStatus,
+    IssueSeverity,
+    IssueStatus,
     create_action,
     create_risk,
+    create_issue,
     normalize_action,
     normalize_program_entities,
     normalize_risk,
+    normalize_issue,
 )
 
 
 class ProgramDomainTests(unittest.TestCase):
+    def test_issue_creation_validation_and_complete_shape(self):
+        with patch("program_domain.utc_timestamp", return_value="2026-07-22T12:00:00+00:00"):
+            minimal = create_issue("Vendor access unavailable")
+            complete = create_issue(
+                "Cutover defect", description="Production validation failed", owner="Release Lead",
+                lifecycle_phase="execution", status="closed", severity="critical",
+                impact="Go-live is blocked", due_date="2026-08-01",
+                resolution_summary="Configuration corrected", resolved_at="2026-07-22T12:00:00+00:00",
+                root_cause="Incorrect tenant configuration",
+            )
+        self.assertEqual(UUID(minimal.object_id).version, 4)
+        self.assertEqual(minimal.status, IssueStatus.OPEN)
+        self.assertEqual(complete.severity, IssueSeverity.CRITICAL)
+        self.assertEqual(complete.to_dict()["resolution_summary"], "Configuration corrected")
+        for values, message in (
+            ({"status": "waiting"}, "status"), ({"severity": "urgent"}, "severity"),
+            ({"due_date": "August 1"}, "due_date"), ({"resolved_at": "2026-07-22"}, "resolved_at"),
+            ({"resolved_at": "2026-07-22T13:00:00+01:00"}, "UTC"),
+            ({"owner": " "}, "owner"), ({"lifecycle_phase": "invented"}, "lifecycle_phase"),
+        ):
+            with self.subTest(values=values), self.assertRaisesRegex(DomainValidationError, message):
+                create_issue("Valid issue", **values)
+        with self.assertRaisesRegex(DomainValidationError, "title"):
+            create_issue(" ")
+
+    def test_issue_legacy_compatibility_ids_aliases_and_paths(self):
+        legacy = {"issue": "Vendor access unavailable", "owner": "Operations", "status": "Done", "due_date": "2026-08-01", "resolution": "Access granted", "resolved_date": "2026-07-22", "ignored": True}
+        original = copy.deepcopy(legacy)
+        first = normalize_issue(legacy, "alpha", 1)
+        self.assertEqual(legacy, original)
+        self.assertEqual(first, normalize_issue(legacy, "alpha", 1))
+        self.assertEqual(UUID(first.object_id).version, 5)
+        self.assertEqual(first.status, IssueStatus.RESOLVED)
+        self.assertEqual(first.resolved_at, "2026-07-22T00:00:00+00:00")
+        bare = "44444444-4444-4444-8444-444444444444"
+        self.assertEqual(normalize_issue({"issue_id": f"issue-{bare}", "name": "Prefixed"}, "alpha", 0).object_id, bare)
+        self.assertEqual(normalize_issue({"issue_id": bare, "description": "Bare"}, "alpha", 0).object_id, bare)
+        self.assertEqual(normalize_issue("String issue", "alpha", 0).title, "String issue")
+        self.assertIsNone(normalize_issue({"description": "Legacy closed", "status": "Closed"}, "alpha", 0).resolution_summary)
+        for value, index, path in (({"issue": "Bad", "status": "unknown"}, 1, r"issues\[1\]\.status"), ({"issue": "Bad", "due_date": "soon"}, 2, r"issues\[2\]\.due_date"), ({"issue": "Bad", "closed_at": "yesterday"}, 0, r"issues\[0\]\.resolved_at")):
+            with self.subTest(value=value), self.assertRaisesRegex(DomainValidationError, path):
+                normalize_issue(value, "alpha", index)
+        canonical = create_issue("Canonical").to_dict(); canonical["unknown"] = True
+        with self.assertRaisesRegex(DomainValidationError, "unsupported"):
+            normalize_issue(canonical, "alpha", 0)
     def test_new_minimal_and_complete_risks_are_canonical_uuid4(self):
         with patch("program_domain.utc_timestamp", return_value="2026-07-22T12:00:00+00:00"):
             minimal = create_risk("Licensing approval may delay deployment")
@@ -185,13 +234,13 @@ class ProgramDomainTests(unittest.TestCase):
             source_object_id=action.object_id, target_object_id=risk.object_id,
             created_at=None, source=DomainSource.MANUAL,
         )
-        _actions, _risks, relationships = normalize_program_entities({
+        _actions, _risks, _issues, relationships = normalize_program_entities({
             "program_id": "alpha", "next_actions": [action.to_dict()],
             "risks": [risk.to_dict()], "relationships": [relationship.to_dict()],
         })
         self.assertEqual(relationships[0]["target_object_id"], risk.object_id)
 
-    def test_realized_as_is_vocabulary_only_until_issue_adoption(self):
+    def test_issue_relationship_rules_are_enforced(self):
         risk = create_risk("May become an issue")
         relationship = {
             "relationship_id": "33333333-3333-4333-8333-333333333333",
@@ -199,12 +248,28 @@ class ProgramDomainTests(unittest.TestCase):
             "target_object_id": "44444444-4444-4444-8444-444444444444",
             "created_at": None, "source": "manual",
         }
-        with self.assertRaisesRegex(DomainValidationError, "unknown object_id"):
-            normalize_program_entities({
+        _actions, _risks, issues, relationships = normalize_program_entities({
                 "program_id": "alpha", "next_actions": [], "risks": [risk.to_dict()],
                 "issues": [{"issue_id": "issue-44444444-4444-4444-8444-444444444444", "description": "Legacy issue"}],
                 "relationships": [relationship],
             })
+        self.assertEqual(relationships[0]["target_object_id"], issues[0]["object_id"])
+        wrong = dict(relationship); wrong["source_object_id"], wrong["target_object_id"] = wrong["target_object_id"], wrong["source_object_id"]
+        with self.assertRaisesRegex(DomainValidationError, "risk -> issue"):
+            normalize_program_entities({"program_id": "alpha", "risks": [risk.to_dict()], "issues": [issues[0]], "relationships": [wrong]})
+
+    def test_issue_identity_is_unique_across_all_adopted_collections(self):
+        shared = "44444444-4444-4444-8444-444444444444"
+        issue = create_issue("Issue").to_dict(); issue["object_id"] = shared
+        duplicate = create_issue("Other issue").to_dict(); duplicate["object_id"] = shared
+        for field, entity in (("issues", duplicate), ("next_actions", {**create_action("Action").to_dict(), "object_id": shared}), ("risks", {**create_risk("Risk").to_dict(), "object_id": shared})):
+            program = {"program_id": "alpha", "issues": [issue], "relationships": []}
+            if field == "issues":
+                program["issues"].append(entity)
+            else:
+                program[field] = [entity]
+            with self.subTest(field=field), self.assertRaisesRegex(DomainValidationError, "object_id values must be unique"):
+                normalize_program_entities(program)
 
     def test_relationship_round_trip_and_referential_validation(self):
         first = create_action("First")
@@ -218,7 +283,7 @@ class ProgramDomainTests(unittest.TestCase):
             source=DomainSource.MANUAL,
         )
 
-        actions, risks, relationships = normalize_program_entities({
+        actions, risks, issues, relationships = normalize_program_entities({
             "program_id": "alpha",
             "next_actions": [first.to_dict(), second.to_dict()],
             "relationships": [relationship.to_dict()],
@@ -226,6 +291,7 @@ class ProgramDomainTests(unittest.TestCase):
 
         self.assertEqual(actions[0], first.to_dict())
         self.assertEqual(risks, [])
+        self.assertEqual(issues, [])
         self.assertEqual(relationships, [relationship.to_dict()])
 
         invalid = relationship.to_dict()

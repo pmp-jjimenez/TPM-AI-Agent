@@ -294,3 +294,21 @@ Privacy and scope boundaries:
 Recommended next step:
 
 - Sprint 54: Project Initiation Artifacts generated from reviewed structured analysis, beginning with an Internal Technical Kickoff and Project Charter.
+## RAID Adoption v1 — Issue Adoption — US-57.2
+
+Adopted stored Program issues as framework-neutral `Issue` entities on the existing
+`ProgramEntity` foundation. Program Schema `1.3.0` defines canonical Issue status,
+optional severity and impact, due date, root cause, resolution summary, and resolved
+timestamp. Legacy strings and dictionaries normalize without rewriting storage;
+missing identity uses deterministic UUIDv5 and explicit save emits canonical JSON.
+
+CLI issue creation continues to require owner and due date and uses UUIDv4. Closure now
+targets the selected canonical `object_id`, requires a resolution summary, and updates
+the closed status, UTC resolved timestamp, and audit timestamp. Aggregate identity and
+relationship endpoints cover Actions, Risks, and Issues, including resolves,
+realized-as, results-from, and adopted-entity relates-to rules.
+
+Workspace Intelligence remains Contract `1.0.0`; Issue title evidence is catalogued at
+stable RFC 6901 paths `/issuesById/<UUID>/title`. The read API transports canonical
+Issues and the React workspace strictly parses and renders them read-only. Dependency
+adoption, CRUD endpoints, relationship inference/UI, and graph traversal remain deferred.

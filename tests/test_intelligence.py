@@ -26,6 +26,8 @@ from intelligence_analysis import (
 
 RISK_ID = "22222222-2222-4222-8222-222222222222"
 RISK_POINTER = f"/risksById/{RISK_ID}/title"
+ISSUE_ID = "44444444-4444-4444-8444-444444444444"
+ISSUE_POINTER = f"/issuesById/{ISSUE_ID}/title"
 CANONICAL_RISK = {
     "object_id": RISK_ID, "object_type": "risk", "title": "Stored delivery risk",
     "description": None, "owner": None, "lifecycle_phase": "initiation",
@@ -33,6 +35,13 @@ CANONICAL_RISK = {
     "status": "open", "probability": None, "impact": None, "priority": None,
     "mitigation_plan": None, "contingency_plan": None, "review_date": None,
     "acceptance_rationale": None, "accepted_by": None,
+}
+CANONICAL_ISSUE = {
+    "object_id": ISSUE_ID, "object_type": "issue", "title": "Stored issue",
+    "description": None, "owner": None, "lifecycle_phase": "initiation",
+    "audit": {"created_at": None, "updated_at": None, "source": "legacy_import"},
+    "status": "open", "severity": None, "impact": None, "due_date": None,
+    "resolution_summary": None, "resolved_at": None, "root_cause": None,
 }
 PROGRAM = {
     "program_id": "controlled-program",
@@ -43,7 +52,7 @@ PROGRAM = {
     "health": "Green",
     "confidence": "High",
     "risks": [CANONICAL_RISK],
-    "issues": [{"description": "Stored issue", "status": "Open"}],
+    "issues": [CANONICAL_ISSUE],
     "next_actions": [{"description": "Stored action", "status": "Open"}],
 }
 
@@ -110,6 +119,8 @@ class IntelligenceServiceTests(unittest.TestCase):
         self.assertIn("risk", [item["category"] for item in result["findings"]])
         self.assertIn("missing_information", [item["category"] for item in result["findings"]])
         self.assertEqual(result["findings"][0]["evidence_refs"], [RISK_POINTER])
+        issue_finding = next(item for item in result["findings"] if item["statement"].startswith("A program issue is recorded"))
+        self.assertEqual(issue_finding["evidence_refs"], [ISSUE_POINTER])
         self.assertEqual(result["next_action"]["statement"], "Conduct the Internal Technical Kickoff.")
         self.assertEqual(result["next_action"]["related_recommendation_ids"], [result["recommendations"][0]["id"]])
         self.assertEqual(len([result["next_action"]]), 1)
@@ -234,6 +245,20 @@ class IntelligenceServiceTests(unittest.TestCase):
         self.assertEqual(first_snapshot["risksById"][RISK_ID], reordered_snapshot["risksById"][RISK_ID])
         self.assertIn(RISK_POINTER, first_catalog)
         self.assertIn(RISK_POINTER, reordered_catalog)
+
+    def test_issue_evidence_is_object_keyed_catalogued_and_stable_when_array_reorders(self):
+        second = {**CANONICAL_ISSUE, "object_id": "55555555-5555-4555-8555-555555555555", "title": "Second issue"}
+        first_snapshot, first_catalog = extract_intelligence_evidence({**PROGRAM, "issues": [CANONICAL_ISSUE, second]})
+        reordered_snapshot, reordered_catalog = extract_intelligence_evidence({**PROGRAM, "issues": [second, CANONICAL_ISSUE]})
+        self.assertEqual(first_snapshot["issuesById"][ISSUE_ID], reordered_snapshot["issuesById"][ISSUE_ID])
+        self.assertIn(ISSUE_POINTER, first_catalog)
+        self.assertIn(ISSUE_POINTER, reordered_catalog)
+        provider = deepcopy(PROVIDER_RESULT)
+        provider["findings"][1]["evidence_refs"] = [ISSUE_POINTER]
+        self.assertEqual(finalize_intelligence_analysis(provider, first_catalog)["findings"][1]["evidence_refs"], [ISSUE_POINTER])
+        provider["findings"][1]["evidence_refs"] = [f"/issuesById/{ISSUE_ID}/status"]
+        with self.assertRaises(IntelligenceAnalysisError):
+            finalize_intelligence_analysis(provider, first_catalog)
 
     def test_evidence_catalog_uses_only_nonempty_bounded_snapshot_values(self):
         snapshot, catalog = extract_intelligence_evidence({**PROGRAM, "customer": "", "dependencies": ["Vendor", ""]})

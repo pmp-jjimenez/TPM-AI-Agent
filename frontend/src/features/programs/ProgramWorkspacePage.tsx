@@ -13,7 +13,7 @@ import {
   StatusCard,
 } from './ExecutiveWorkspaceComponents';
 import { getProgram, getProgramIntelligence } from './programApi';
-import type { IntelligenceResponse, ProgramAction, ProgramRecord, ProgramRisk } from './programTypes';
+import type { IntelligenceResponse, ProgramAction, ProgramIssue, ProgramRecord, ProgramRisk } from './programTypes';
 import { usableText } from './programTypes';
 
 interface Milestone { date?: string; title: string; description?: string; status?: string }
@@ -34,6 +34,7 @@ function milestones(program: ProgramRecord): Milestone[] {
 
 function storedActions(program: ProgramRecord): ProgramAction[] { return program.next_actions ?? []; }
 function storedRisks(program: ProgramRecord): ProgramRisk[] { return program.risks ?? []; }
+function storedIssues(program: ProgramRecord): ProgramIssue[] { return program.issues ?? []; }
 
 function displayDate(value: unknown): string | undefined {
   const text = usableText(value);
@@ -144,6 +145,7 @@ export function ProgramWorkspacePage() {
   const timeline = milestones(program);
   const actions = storedActions(program);
   const risks = storedRisks(program);
+  const issues = storedIssues(program);
 
   return (
     <PageContainer>
@@ -237,6 +239,25 @@ export function ProgramWorkspacePage() {
                 ].filter(Boolean).map((detail) => <Typography key={String(detail)} variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>{detail}</Typography>)}
               </Paper>
             )) : <Typography color="text.secondary">No stored program risks are available.</Typography>}
+          </Stack>
+        </WorkspaceSection>
+
+        <WorkspaceSection title="Stored Issues" description="Canonical issues explicitly persisted with the program.">
+          <Stack spacing={1.5}>
+            {issues.length ? issues.map((issue) => (
+              <Paper key={issue.object_id} variant="outlined" sx={{ p: 2 }}>
+                <Typography fontWeight={600}>{issue.title}</Typography>
+                {[
+                  `Status: ${issue.status}`,
+                  issue.owner && `Owner: ${issue.owner.display_name}`,
+                  issue.due_date && `Due date: ${issue.due_date}`,
+                  issue.severity && `Severity: ${issue.severity}`,
+                  issue.impact && `Impact: ${issue.impact}`,
+                  issue.resolution_summary && `Resolution: ${issue.resolution_summary}`,
+                  issue.resolved_at && `Resolved: ${issue.resolved_at}`,
+                ].filter(Boolean).map((detail) => <Typography key={String(detail)} variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>{detail}</Typography>)}
+              </Paper>
+            )) : <Typography color="text.secondary">No stored program issues are available.</Typography>}
           </Stack>
         </WorkspaceSection>
 

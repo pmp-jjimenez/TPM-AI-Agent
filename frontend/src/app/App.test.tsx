@@ -41,6 +41,16 @@ function canonicalRisk(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function canonicalIssue(overrides: Record<string, unknown> = {}) {
+  return {
+    object_id: '44444444-4444-4444-8444-444444444444', object_type: 'issue', title: 'Stored access issue',
+    description: null, owner: null, lifecycle_phase: 'execution',
+    audit: { created_at: null, updated_at: null, source: 'legacy_import' },
+    status: 'open', severity: null, impact: null, due_date: null,
+    resolution_summary: null, resolved_at: null, root_cause: null, ...overrides,
+  };
+}
+
 const aiIntelligence = {
   schema_version: '1.0.0',
   program_id: 'alpha-program',
@@ -319,6 +329,27 @@ describe('Program workspace', () => {
     renderApp('/programs/alpha-program');
     expect(await screen.findByText('Program could not be loaded')).toBeInTheDocument();
     expect(screen.queryByText('Stored delivery risk')).not.toBeInTheDocument();
+  });
+
+  it('renders strict canonical stored issues and optional closure details', async () => {
+    mockFetchOnce({ ...alpha, issues: [canonicalIssue({
+      status: 'closed', owner: { display_name: 'Operations', stakeholder_id: null },
+      due_date: '2026-08-01', severity: 'high', impact: 'Cutover blocked',
+      resolution_summary: 'Access granted', resolved_at: '2026-07-22T12:00:00Z',
+    })] });
+    renderApp('/programs/alpha-program');
+    expect(await screen.findByRole('heading', { level: 2, name: 'Stored Issues' })).toBeInTheDocument();
+    expect(screen.getByText('Stored access issue')).toBeInTheDocument();
+    expect(screen.getByText('Owner: Operations')).toBeInTheDocument();
+    expect(screen.getByText('Severity: high')).toBeInTheDocument();
+    expect(screen.getByText('Resolution: Access granted')).toBeInTheDocument();
+  });
+
+  it('rejects a malformed canonical stored issue payload', async () => {
+    mockFetchOnce({ ...alpha, issues: [canonicalIssue({ due_date: 'soon' })] });
+    renderApp('/programs/alpha-program');
+    expect(await screen.findByText('Program could not be loaded')).toBeInTheDocument();
+    expect(screen.queryByText('Stored access issue')).not.toBeInTheDocument();
   });
 
   it('declares single-column narrow breakpoints for executive status sections', async () => {

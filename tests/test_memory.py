@@ -116,7 +116,8 @@ class ProgramMemoryTests(unittest.TestCase):
                 self.assertEqual(reloaded["schema_version"], CURRENT_SCHEMA_VERSION)
                 self.assertIn("metadata", reloaded)
                 self.assertEqual(len(reloaded["issues"]), 1)
-                self.assertEqual(reloaded["issues"][0]["owner"], "Integration Lead")
+                self.assertEqual(reloaded["issues"][0]["owner"]["display_name"], "Integration Lead")
+                self.assertEqual(reloaded["issues"][0]["object_type"], "issue")
             finally:
                 memory.DATA_DIR = original_data_dir
 
@@ -152,8 +153,8 @@ class ProgramMemoryTests(unittest.TestCase):
                 self.assertEqual(loaded["artifacts"], [])
                 self.assertEqual(loaded["relationships"], [])
                 self.assertEqual(loaded["metadata"]["source"], "cli")
-                self.assertNotIn("owner", loaded["issues"][0])
-                self.assertNotIn("due_date", loaded["issues"][0])
+                self.assertIsNone(loaded["issues"][0]["owner"])
+                self.assertIsNone(loaded["issues"][0]["due_date"])
             finally:
                 memory.DATA_DIR = original_data_dir
 

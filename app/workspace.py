@@ -3,7 +3,7 @@ from datetime import datetime
 from memory import load_program, save_program
 from executive import generate_executive_report
 from schema import generate_item_id
-from program_domain import create_action, create_risk
+from program_domain import create_action, create_issue, create_risk, utc_timestamp
 
 
 def show_summary(program):
@@ -58,13 +58,10 @@ def add_issue(program):
         except ValueError:
             print("Invalid date. Use YYYY-MM-DD.")
 
-    program["issues"].append({
-        "issue_id": generate_item_id("issue"),
-        "description": issue,
-        "owner": owner,
-        "due_date": due_date,
-        "status": "Open"
-    })
+    program["issues"].append(create_issue(
+        issue, owner=owner, due_date=due_date,
+        lifecycle_phase=program.get("phase"),
+    ).to_dict())
 
     save_program(program)
     print("\nIssue added successfully.")
@@ -73,18 +70,19 @@ def add_issue(program):
 
 def get_open_issues(program):
     return [
-        (index, issue)
-        for index, issue in enumerate(program["issues"])
-        if issue.get("status") == "Open"
+        issue for issue in program["issues"]
+        if issue.get("status") == "open"
     ]
 
 
 def display_open_issues(open_issues):
-    for number, (_, issue) in enumerate(open_issues, start=1):
-        owner = issue.get("owner") or "Not assigned"
+    for number, issue in enumerate(open_issues, start=1):
+        owner_value = issue.get("owner")
+        owner = owner_value.get("display_name") if isinstance(owner_value, dict) else owner_value
+        owner = owner or "Not assigned"
         due_date = issue.get("due_date") or "Not defined"
 
-        print(f"\n{number}. {issue['description']}")
+        print(f"\n{number}. {issue['title']}")
         print(f"   Owner   : {owner}")
         print(f"   Due date: {due_date}")
         print(f"   Status  : {issue['status']}")
@@ -127,8 +125,25 @@ def close_issue(program):
         input("\nPress Enter to return to the workspace...")
         return
 
-    issue_index, _ = open_issues[selected_number - 1]
-    program["issues"][issue_index]["status"] = "Closed"
+    selected_object_id = open_issues[selected_number - 1]["object_id"]
+    resolution_summary = input("\nResolution summary:\n\n").strip()
+    if not resolution_summary:
+        print("Resolution summary cannot be empty.")
+        input("\nPress Enter to return to the workspace...")
+        return
+
+    issue = next(
+        (item for item in program["issues"] if item.get("object_id") == selected_object_id),
+        None,
+    )
+    if issue is None:
+        print("Selected issue is no longer available.")
+        return
+    now = utc_timestamp()
+    issue["status"] = "closed"
+    issue["resolution_summary"] = resolution_summary
+    issue["resolved_at"] = now
+    issue["audit"]["updated_at"] = now
 
     save_program(program)
     print("\nIssue closed successfully.")

@@ -262,7 +262,7 @@ training, background jobs, retries, or deployment behavior.
 
 ## Program Domain Foundation
 
-Program Schema `1.2.0` evolves the implemented portion of the approved
+Program Schema `1.3.0` evolves the implemented portion of the approved
 Program Domain Model in `app/program_domain.py`. The module is framework-neutral:
 it imports no FastAPI, transport model, SQLAlchemy, React, or provider code.
 
@@ -270,7 +270,9 @@ it imports no FastAPI, transport model, SQLAlchemy, React, or provider code.
 description and owner, lifecycle relevance, and closed audit metadata. `Action` adds
 controlled execution and completion data. `Risk` reuses the same foundation and adds
 closed status, probability, impact, human-assigned priority, treatment, review, and
-acceptance fields. Issue and Dependency retain their existing shapes.
+acceptance fields. `Issue` adds controlled open, in-progress, blocked, resolved, and
+closed states, optional severity and impact, due date, root cause, and closure metadata.
+Dependency retains its existing, noncanonical shape.
 
 New CLI and SOW Actions receive UUIDv4 identities. Compatibility loading accepts
 legacy strings, dictionaries, and `action_id` values and produces the same
@@ -282,17 +284,28 @@ the canonical representation.
 New CLI and SOW Risks also receive UUIDv4 identities. Legacy Risk strings and partial
 dictionaries accept `risk_id`, text/status/owner aliases, `due_date` as review date,
 and `severity` as treatment priority. Missing IDs use collection-specific repeatable
-UUIDv5 identities. Aggregate object identity is unique across Actions and Risks.
+UUIDv5 identities.
+
+Issue compatibility accepts strings and partial dictionaries, `issue_id`, owner strings,
+display-case statuses, and resolution aliases. Missing IDs receive deterministic UUIDv5
+identities; date-only `resolved_date` uses the documented start-of-day UTC boundary.
+Legacy owner, due date, severity, and resolution data may remain null. CLI creation still
+requires owner and due date. CLI closure resolves the displayed selection to `object_id`,
+requires a resolution summary, and records `resolved_at` plus `audit.updated_at` in UTC.
+Aggregate object identity is unique across Actions, Risks, and Issues.
 
 Programs also contain a closed `relationships` collection of typed source/target
 references. Aggregate validation enforces unique object and relationship IDs,
-known endpoints, no self-reference, and no duplicate typed edges. US-56.2 adds no
-relationship inference, traversal, or UI.
+known canonical endpoints, no self-reference, and no duplicate typed edges. Typed rules
+permit Action `resolves` Issue, Risk `realized_as` Issue, Issue `results_from` Risk, and
+`relates_to` between adopted entities. No inverse is inferred and no relationship UI or
+traversal is added.
 
 The Intelligence Contract remains `1.0.0`. Bounded extraction reads canonical Action
-and Risk titles without adding public fields. Risk evidence is internally object-keyed
+Risk, and Issue titles without adding public fields. Risk evidence is internally object-keyed
 as `/risksById/<UUID>/title`; this RFC 6901 pointer remains stable when the persisted
-Risk array is reordered. Public response keys, semantic IDs, strict parsing, and
+Risk array is reordered. Issue evidence follows `/issuesById/<UUID>/title` and has the
+same stability and provider-catalog enforcement. Public response keys, semantic IDs, strict parsing, and
 all-or-fallback behavior remain unchanged.
 
 Persona routing does not add Gemini calls. The system does not call one model per persona, simulate an expert debate, or claim independent autonomous agents were executed. The AI does not autonomously modify program JSON, close issues, update health, create reports, upload documents, or operate a web interface. Human CLI input currently drives state-changing workspace actions.
@@ -326,7 +339,7 @@ This layer is intentionally independent of Gemini. It does not call an AI model,
 
 - The browser supports read-only program browsing and workspace views; the CLI remains the interface for mutations.
 - Local JSON files are the only program persistence mechanism.
-- No schema migration framework; compatibility normalization upgrades legacy Actions in memory and writes canonical data only on explicit save.
+- No schema migration framework; compatibility normalization upgrades legacy Actions, Risks, and Issues in memory and writes canonical data only on explicit save.
 - Automated coverage uses `unittest`, but there is no separate CI configuration in this repository.
 - The web interface calls the available read-only backend API but does not provide mutations.
 - No implemented Docker runtime.
