@@ -29,7 +29,7 @@ class DependencyDeclarationTests(unittest.TestCase):
 
 class RendererIsolationTests(unittest.TestCase):
     def test_renderer_neutral_and_markdown_modules_import_without_reportlab(self):
-        target_modules = ("artifact_renderer", "font_assets", "executive")
+        target_modules = ("artifact_renderer", "executive_report", "font_assets", "executive")
         saved_modules = {name: sys.modules.get(name) for name in target_modules}
         for name in target_modules:
             sys.modules.pop(name, None)

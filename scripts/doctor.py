@@ -20,6 +20,7 @@ REQUIRED_DIRECTORIES = [
 ]
 CORE_MODULES = [
     "artifact_renderer",
+    "executive_report",
     "font_assets",
     "memory",
     "prompt_builder",

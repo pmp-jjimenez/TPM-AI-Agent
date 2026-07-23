@@ -51,6 +51,7 @@ This document describes the repository as it exists today.
 │   ├── application_version.py
 │   ├── engine.py
 │   ├── executive.py
+│   ├── executive_report.py
 │   ├── font_assets.py
 │   ├── intelligence.py
 │   ├── intelligence_analysis.py
@@ -67,7 +68,8 @@ This document describes the repository as it exists today.
 │       └── microsoft-teams-latam.json
 ├── docs/
 │   ├── adr/
-│   │   └── 0001-use-reportlab-as-isolated-art-1.0-pdf-backend.md
+│   │   ├── 0001-use-reportlab-as-isolated-art-1.0-pdf-backend.md
+│   │   └── 0002-separate-executive-report-content-composition-and-rendering.md
 │   ├── AI_EXPERT_COUNCIL.md
 │   ├── ARCHITECTURE.md
 │   ├── BACKLOG.md
@@ -160,7 +162,11 @@ Reserved for future versioned schemas and cross-boundary model contracts. Its cu
 
 ### `app/`
 
-Python application modules shared by CLI and API. `intelligence.py` is the side-effect-free orchestration boundary and `intelligence_analysis.py` owns strict bounded parsing; existing CLI modules continue to own input/output, persistence mutations, and generated artifacts.
+Python application modules shared by CLI and API. `executive_report.py` owns the
+immutable, renderer-independent Executive Status Report truth model and deterministic
+builder. `intelligence.py` is the side-effect-free orchestration boundary and
+`intelligence_analysis.py` owns strict bounded parsing; existing CLI modules continue
+to own input/output, persistence mutations, and generated artifacts.
 
 ### `data/`
 

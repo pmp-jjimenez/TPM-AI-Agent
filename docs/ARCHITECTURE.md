@@ -413,6 +413,42 @@ the shell, Command Center, Program Workspace, feedback, and not-found views. It 
 not add a logo, custom font dependency, dark or selectable themes, animation framework,
 charts, new routes, or a full information-architecture redesign.
 
+## Executive Report Truth Model
+
+ART-1.0 Increment 2 adds `app/executive_report.py`. Its immutable
+`ExecutiveReportViewModel` answers what an Executive Status Report can truthfully say
+from a compatibility-normalized Program. It distinguishes stored facts, deterministic
+values, recommendations, and missing values and retains source references for every
+record.
+
+The model retains all normalized risks, issues, dependencies, decisions, and actions;
+the future presentation-composition layer, not this truth boundary, will own any
+ten-record display limit. Counts, active state, overdue state, stable ordering, and the
+primary recommendation are deterministic derivations. The builder receives its report
+date and optional generation metadata from the caller and never reads the wall clock,
+calls Gemini, writes persistence, or creates files.
+
+Active statuses under policy `1.0` are risk `open`, `monitoring`, `mitigating`, and
+`accepted`; issue `open`, `in_progress`, and `blocked`; dependency `open` and
+`in_progress`; decision `proposed`; and action `open`, `in_progress`, and `blocked`.
+Accepted risk exposure remains active and retains its accepted status.
+
+Recommendation policy `1.0` evaluates a blocked issue, active high/critical-priority
+risk, explicitly blocking decision, blocked or overdue high/critical-priority action,
+and active dependency with explicit impact, in that order. The current schema cannot
+explicitly represent a blocking decision, so that rule cannot qualify. When no rule
+qualifies, the contract returns the bounded no-evidence recommendation outcome.
+
+Completeness is notice-based rather than scored and is never treated as health or
+confidence. The contract discloses missing source-backed report fields and relevant
+record ownership or response gaps. It always discloses that dependency criticality and
+explicit decision-blocker evidence are absent from the current schema.
+
+This module has no ReportLab dependency and contains no semantic presentation
+components, layout, PDF, file-output, or CLI behavior. The boundary decision is
+recorded in
+[`ADR 0002`](adr/0002-separate-executive-report-content-composition-and-rendering.md).
+
 ## Current Limitations
 
 - The browser supports read-only program browsing and workspace views; the CLI remains the interface for mutations.
@@ -426,8 +462,8 @@ charts, new routes, or a full information-architecture redesign.
 - Major Incident, Executive Review, and Operational Readiness are menu placeholders only.
 - Persona routing is integrated at the CLI and New Program prompt boundary, but there is no AI Expert Council orchestration.
 - Executive stakeholders such as sponsors, CIOs, CTOs, VPs, steering committees, finance, legal, and PMO leadership remain a future governance or stakeholder layer and are not implemented as a Stakeholder Council.
-- Executive report generation remains Markdown-only. ART-1.0 Increment 1 adds PDF
-  dependency, font, and isolation foundations but no PDF generation workflow.
+- Executive report generation remains Markdown-only. ART-1.0 Increments 1 and 2 add
+  isolated renderer foundations and the report truth model but no PDF workflow.
 - Gemini model availability and behavior depend on external API access and a configured `GEMINI_API_KEY`.
 - Persona routing is transient execution context only; there is no program schema change and routing is not persisted to program JSON.
 

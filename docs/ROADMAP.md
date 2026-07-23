@@ -24,7 +24,10 @@ v0.8.0 will establish production-quality executive artifact generation on the v0
 domain and experience foundation. ART-1.0 is intentionally incremental. Its first
 increment adds the isolated ReportLab dependency boundary, versioned Inter font
 assets, renderer-neutral result contracts, backend readiness diagnostics, and
-architecture evidence. It does not yet generate the Executive Status Report PDF.
+architecture evidence. Increment 2 adds the immutable ExecutiveReportViewModel,
+source classifications, deterministic active/count/ordering/recommendation policies,
+and explicit completeness notices. It does not add SemanticArtifact composition,
+layout, file output, or Executive Status Report PDF generation.
 
 The v0.8.0 production deliverable remains one Executive Status Report PDF alongside
 the preserved Markdown report. PowerPoint, HTML, Project Charter, Operational
