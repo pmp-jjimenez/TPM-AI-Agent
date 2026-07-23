@@ -96,8 +96,9 @@ FastAPI publishes Swagger UI at `/docs` and OpenAPI JSON at `/openapi.json`. The
 
 The reporting engine owns transformation of validated program state into audience-specific artifacts. The current implementation is `app/executive.py`, which generates Markdown executive status reports. Future work may add PDF, presentation, scheduled, or template-driven output behind a stable backend interface while preserving deterministic inputs and auditable generated artifacts.
 
-ART-1.0 Increments 1–3 establish the dependency, truth-model, and semantic-composition
-foundation for the future Executive Status Report PDF:
+ART-1.0 Increments 1–4 establish the dependency, truth-model, semantic-composition,
+and renderer-neutral design-system foundation for the future Executive Status Report
+PDF:
 
 - `app/artifact_renderer.py` defines the renderer-neutral PDF format declaration,
   render context, in-memory result, generic renderer protocol, and bounded errors. It
@@ -126,15 +127,30 @@ foundation for the future Executive Status Report PDF:
 - Executive record selection policy 1.0 consumes the existing view-model ordering,
   selects at most ten records per collection by default, and always reports total,
   selected, and omitted counts. The full tuples remain in the view model.
+- `app/artifact_design.py` owns the immutable Artifact Design System. It maps the
+  eight component classes, three emphasis values, six status visual roles, and two
+  explicit densities to closed relative typography, spacing, color, surface, and
+  border roles. Record collections additionally define identifier hierarchy,
+  missing-value text, omitted-count, overdue, divider, and alternating-row intent.
+- The design system requires textual status reinforcement, textual missing values,
+  4.5:1 normal-text and 3:1 large-text minimum contrast, semantic component reading
+  order, evidence-ID and omitted-count availability, selectable text where the
+  renderer is text based, and grayscale-distinguishable meaning. These requirements
+  are not certification or conformance claims.
+- All design measurements are relative. No design token contains page or slide
+  geometry, coordinates, physical units, pagination, renderer-native styles, font
+  files, filesystem output, or automatic density selection.
 - `app/assets/fonts/inter/` contains only the approved static TTF files, OFL license,
   and immutable source/checksum record. Runtime font discovery never uses system,
   package-manager, CDN, or mutable external paths.
 
 Existing Program domain, persistence, CLI, API, Gemini behavior, and Markdown report
-generation remain unchanged. No Artifact Design System, PDF report layout or output,
-CLI PDF action, PowerPoint renderer, or HTML renderer exists in this increment. The
-backend decision is recorded in
+generation remain unchanged. No PDF report layout or output, CLI PDF action,
+PowerPoint renderer, or HTML renderer exists in this increment. The backend decision
+is recorded in
 [ADR 0001](adr/0001-use-reportlab-as-isolated-art-1.0-pdf-backend.md).
+The design-system boundary is recorded in
+[ADR 0003](adr/0003-use-a-renderer-neutral-artifact-design-system.md).
 
 ### AI Engine
 
@@ -478,9 +494,9 @@ recorded in
 - Major Incident, Executive Review, and Operational Readiness are menu placeholders only.
 - Persona routing is integrated at the CLI and New Program prompt boundary, but there is no AI Expert Council orchestration.
 - Executive stakeholders such as sponsors, CIOs, CTOs, VPs, steering committees, finance, legal, and PMO leadership remain a future governance or stakeholder layer and are not implemented as a Stakeholder Council.
-- Executive report generation remains Markdown-only. ART-1.0 Increments 1–3 add
+- Executive report generation remains Markdown-only. ART-1.0 Increments 1–4 add
   isolated renderer foundations, the report truth model, and renderer-neutral
-  semantic composition but no PDF workflow.
+  semantic composition and design intent but no PDF workflow.
 - Gemini model availability and behavior depend on external API access and a configured `GEMINI_API_KEY`.
 - Persona routing is transient execution context only; there is no program schema change and routing is not persisted to program JSON.
 

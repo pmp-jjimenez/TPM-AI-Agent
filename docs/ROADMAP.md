@@ -30,8 +30,12 @@ and explicit completeness notices. Increment 3 adds the
 immutable renderer-neutral SemanticArtifact and Executive Status Report composer. It
 preserves view-model truth, exposes deterministic accessibility labels and recorded-
 data empty states, and selects the first ten already ordered records per collection
-by default while disclosing every omission. These increments add no design system,
-layout, file output, or Executive Status Report PDF generation.
+by default while disclosing every omission. Increment 4 adds the
+immutable renderer-neutral Artifact Design System: closed relative typography and
+spacing scales, restrained semantic color, surface, border, status, emphasis, and
+density roles, exact eight-component mappings, and accessibility and grayscale
+requirements. It adds no concrete layout, file output, or Executive Status Report PDF
+generation.
 
 The v0.8.0 production deliverable remains one Executive Status Report PDF alongside
 the preserved Markdown report. PowerPoint, HTML, Project Charter, Operational

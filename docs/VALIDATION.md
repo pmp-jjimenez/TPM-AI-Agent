@@ -26,6 +26,12 @@ Current automated coverage validates:
   selection policy 1.0. Composer tests prove that default/custom limits disclose
   omissions, preserve supplied ordering and classifications, and leave the complete
   view model unchanged.
+- Immutable Artifact Design System identity and closed typography, spacing, color,
+  surface, border, status, emphasis, component, and density vocabularies. Tests
+  validate strict immutable lookup, complete references, health-to-visual-role
+  mapping, non-adaptive density, contrast requirements, textual reinforcement,
+  grayscale policy, and rejection of incomplete or contradictory systems without
+  importing renderer libraries.
 - Program memory create, save, and reload behavior in a temporary directory.
 - Prompt builder inclusion of project description, TPM context, and expected assessment sections.
 - Executive report generation in a temporary reports directory.
@@ -39,7 +45,9 @@ The automated tests do not validate:
 - Real report generation under `reports/`.
 - Generated session files under `sessions/`.
 - Final Executive Status Report PDF content, layout, pagination, and visual quality.
-- Future Artifact Design System, renderer layout, and artifact output behavior.
+- Future renderer layout and artifact output behavior.
+- Rendered contrast, grayscale output, reading order, selectable text, or visual
+  quality; Increment 4 defines requirements but produces no artifact.
 - Future Docker, incident, readiness, PowerPoint, or HTML artifact workflows.
 
 ## Environment Doctor
