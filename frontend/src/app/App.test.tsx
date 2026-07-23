@@ -73,28 +73,6 @@ function canonicalDecision(overrides: Record<string, unknown> = {}) {
   };
 }
 
-const aiIntelligence = {
-  schema_version: '1.0.0',
-  program_id: 'alpha-program',
-  generated_at: '2026-07-17T12:00:00Z',
-  source: 'ai',
-  routing: {
-    version: '1.0.0',
-    primary_persona: { id: 'technical_program_manager', display_name: 'Technical Program Manager' },
-    supporting_personas: [{ id: 'delivery_manager', display_name: 'Delivery Manager' }],
-  },
-  summary: 'Grounded AI intelligence summary.',
-  confidence: 'High',
-  findings: [
-    { id: 'fnd_1111111111111111', category: 'risk', statement: 'Stored delivery risk', confidence: 'High', evidence_refs: ['/risksById/22222222-2222-4222-8222-222222222222/title'], impact: 'Delivery may be affected.' },
-    { id: 'fnd_2222222222222222', category: 'dependency', statement: 'Vendor delivery is required.', confidence: 'Medium', evidence_refs: ['/dependencies/0'] },
-  ],
-  recommendations: [{ id: 'rec_3333333333333333', priority: 'High', statement: 'Review delivery plan', rationale: 'The recorded risk requires a controlled response.', evidence_refs: ['/risksById/22222222-2222-4222-8222-222222222222/title'], related_finding_ids: ['fnd_1111111111111111'] }],
-  decisions_required: [{ id: 'dec_4444444444444444', priority: 'Medium', statement: 'Confirm risk treatment.', reason: 'Delivery direction is required.', related_finding_ids: ['fnd_1111111111111111'], related_recommendation_ids: ['rec_3333333333333333'] }],
-  next_action: { id: 'act_5555555555555555', priority: 'High', statement: 'Review the delivery plan now.', rationale: 'This is the highest-priority supported action.', related_finding_ids: ['fnd_1111111111111111'], related_recommendation_ids: ['rec_3333333333333333'] },
-  limitations: [],
-};
-
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
@@ -174,23 +152,25 @@ describe('Programs page', () => {
 
     fireEvent.click(await screen.findByRole('link', { name: /Alpha Program/ }));
     await waitFor(() => expect(screen.getByTestId('current-location')).toHaveTextContent('/programs/program%20%2F%20one'));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Alpha Program' })).toBeInTheDocument();
+    expect(screen.getAllByText('Program Mission Control')).toHaveLength(2);
   });
 });
 
-describe('Program workspace', () => {
+describe('Program Mission Control integration', () => {
   it('renders loading and then the executive workspace with real identity, status, and supported summary fields', async () => {
     let resolveRequest!: (value: Response) => void;
     vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise((resolve) => { resolveRequest = resolve; }));
     renderApp('/programs/alpha-program');
-    expect(screen.getByRole('status')).toHaveTextContent('Loading program workspace');
+    expect(screen.getByRole('status')).toHaveTextContent('Loading program mission control');
 
     resolveRequest(jsonResponse(alpha));
     expect(await screen.findByRole('heading', { level: 1, name: 'Alpha Program' })).toBeInTheDocument();
     expect(screen.getByText('Program ID: alpha-program')).toBeInTheDocument();
-    expect(screen.getByText('Alpha description Customer: Alpha customer. Current phase: Delivery. Health: Green. Confidence: High.')).toBeInTheDocument();
-    expect(screen.getAllByLabelText('Health: Healthy')).toHaveLength(2);
-    expect(screen.getByText('Jul 17, 2026')).toBeInTheDocument();
-    expect(screen.getByText('test')).toBeInTheDocument();
+    expect(screen.getByText('Alpha description')).toBeInTheDocument();
+    expect(screen.getByLabelText('Health: Healthy')).toBeInTheDocument();
+    expect(screen.getByText('Last updated: Jul 17, 2026')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Executive Health Summary' })).toBeInTheDocument();
     expect(screen.queryByText('Kickoff')).not.toBeInTheDocument();
   });
 
@@ -199,119 +179,29 @@ describe('Program workspace', () => {
     renderApp('/programs/alpha-program');
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Alpha' })).toBeInTheDocument();
-    expect(screen.getByText('Available program information is insufficient to provide an executive summary.')).toBeInTheDocument();
-    expect(screen.getByText('No milestones recorded')).toBeInTheDocument();
-    expect(screen.getByText('No stored program actions are available.')).toBeInTheDocument();
+    expect(screen.getByText('No program description is available.')).toBeInTheDocument();
+    expect(screen.getByText('No actions recorded')).toBeInTheDocument();
+    expect(screen.getByText('No risks recorded')).toBeInTheDocument();
   });
 
-  it('shows a not-generated state and makes no intelligence request on workspace load', async () => {
+  it('shows a structured AI placeholder without making an intelligence request', async () => {
     const fetchSpy = mockFetchOnce(alpha);
     renderApp('/programs/alpha-program');
 
-    expect(await screen.findByText('Intelligence has not been generated for this workspace session.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Generate Intelligence' })).toBeEnabled();
+    expect(await screen.findByRole('heading', { level: 2, name: 'AI Assessment' })).toBeInTheDocument();
+    expect(screen.getByText('Awaiting grounded program intelligence')).toBeInTheDocument();
+    expect(screen.getByText('No recommendation available')).toBeInTheDocument();
+    expect(screen.getByText('No watch item identified')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /intelligence/i })).not.toBeInTheDocument();
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('generates AI intelligence once, displays personas and grounded sections, then allows refresh', async () => {
-    vi.spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(jsonResponse(alpha))
-      .mockResolvedValueOnce(jsonResponse(aiIntelligence))
-      .mockResolvedValueOnce(jsonResponse({ ...aiIntelligence, summary: 'Refreshed intelligence.' }));
+  it('does not surface out-of-scope milestones or substitute meeting history', async () => {
+    mockFetchOnce({ ...alpha, milestones: [{ name: 'Architecture Review' }] });
     renderApp('/programs/alpha-program');
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Generate Intelligence' }));
-    expect(await screen.findByText('Grounded AI intelligence summary.')).toBeInTheDocument();
-    expect(screen.getByText('AI')).toBeInTheDocument();
-    expect(screen.getByText('Technical Program Manager')).toBeInTheDocument();
-    expect(screen.getByText('Delivery Manager')).toBeInTheDocument();
-    expect(screen.getByText('Stored delivery risk')).toBeInTheDocument();
-    expect(screen.getByText('Risks')).toBeInTheDocument();
-    expect(screen.getByText('Dependencies')).toBeInTheDocument();
-    expect(screen.getByText('Review delivery plan')).toBeInTheDocument();
-    expect(screen.getByText('The recorded risk requires a controlled response.')).toBeInTheDocument();
-    expect(screen.getByText('Confirm risk treatment.')).toBeInTheDocument();
-    expect(screen.getByText('Delivery direction is required.')).toBeInTheDocument();
-    expect(screen.getByText('Review the delivery plan now.')).toBeInTheDocument();
-    expect(screen.getAllByText('Evidence: /risksById/22222222-2222-4222-8222-222222222222/title')).toHaveLength(2);
-    expect(screen.getByText('1.0.0')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh Intelligence' }));
-    expect(await screen.findByText('Refreshed intelligence.')).toBeInTheDocument();
-    expect(fetch).toHaveBeenCalledTimes(3);
-  });
-
-  it('displays deterministic fallback and limitations distinctly', async () => {
-    vi.spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(jsonResponse(alpha))
-      .mockResolvedValueOnce(jsonResponse({
-        ...aiIntelligence,
-        source: 'deterministic_fallback',
-        confidence: 'Medium',
-        summary: 'Grounded deterministic summary.',
-        limitations: ['AI generation was unavailable; grounded deterministic intelligence is shown.'],
-      }));
-    renderApp('/programs/alpha-program');
-    fireEvent.click(await screen.findByRole('button', { name: 'Generate Intelligence' }));
-    expect(await screen.findByText('Deterministic Fallback')).toBeInTheDocument();
-    expect(screen.getByText(/AI generation was unavailable/)).toBeInTheDocument();
-  });
-
-  it('prevents duplicate requests while generation is active', async () => {
-    let resolveIntelligence!: (response: Response) => void;
-    vi.spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(jsonResponse(alpha))
-      .mockImplementationOnce(() => new Promise((resolve) => { resolveIntelligence = resolve; }));
-    renderApp('/programs/alpha-program');
-    const button = await screen.findByRole('button', { name: 'Generate Intelligence' });
-    fireEvent.click(button);
-    expect(screen.getByRole('button', { name: 'Generating Intelligence…' })).toBeDisabled();
-    fireEvent.click(screen.getByRole('button', { name: 'Generating Intelligence…' }));
-    expect(fetch).toHaveBeenCalledTimes(2);
-    resolveIntelligence(jsonResponse(aiIntelligence));
-    expect(await screen.findByText('Grounded AI intelligence summary.')).toBeInTheDocument();
-  });
-
-  it('keeps workspace facts visible on intelligence failure and retries safely', async () => {
-    vi.spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(jsonResponse(alpha))
-      .mockRejectedValueOnce(new TypeError('private network detail'))
-      .mockResolvedValueOnce(jsonResponse(aiIntelligence));
-    renderApp('/programs/alpha-program');
-    fireEvent.click(await screen.findByRole('button', { name: 'Generate Intelligence' }));
-    expect(await screen.findByText('Intelligence is unavailable')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 1, name: 'Alpha Program' })).toBeInTheDocument();
-    expect(screen.queryByText('private network detail')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Retry Intelligence' }));
-    expect(await screen.findByText('Grounded AI intelligence summary.')).toBeInTheDocument();
-  });
-
-  it('rejects malformed nested intelligence and invalid evidence references', async () => {
-    const malformed = { ...aiIntelligence, findings: [{ ...aiIntelligence.findings[0], evidence_refs: ['not-a-pointer'] }] };
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(jsonResponse(alpha)).mockResolvedValueOnce(jsonResponse(malformed));
-    renderApp('/programs/alpha-program');
-    fireEvent.click(await screen.findByRole('button', { name: 'Generate Intelligence' }));
-    expect(await screen.findByText('Intelligence is unavailable')).toBeInTheDocument();
-    expect(screen.queryByText('Stored delivery risk')).not.toBeInTheDocument();
-  });
-
-  it('rejects relationships to IDs absent from the same result', async () => {
-    const malformed = { ...aiIntelligence, next_action: { ...aiIntelligence.next_action, related_finding_ids: ['fnd_aaaaaaaaaaaaaaaa'] } };
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(jsonResponse(alpha)).mockResolvedValueOnce(jsonResponse(malformed));
-    renderApp('/programs/alpha-program');
-    fireEvent.click(await screen.findByRole('button', { name: 'Generate Intelligence' }));
-    expect(await screen.findByText('Intelligence is unavailable')).toBeInTheDocument();
-  });
-
-  it('renders explicit milestones and never substitutes meeting history', async () => {
-    mockFetchOnce({
-      ...alpha,
-      milestones: [null, 'bad', { name: 'Architecture Review', target_date: '2026-08-10', status: 'Scheduled' }, { title: 3 }],
-    });
-    renderApp('/programs/alpha-program');
-
-    expect(await screen.findByText('Architecture Review')).toBeInTheDocument();
-    expect(screen.getByText('Aug 10, 2026')).toBeInTheDocument();
-    expect(screen.getByText('Status: Scheduled')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Alpha Program' })).toBeInTheDocument();
+    expect(screen.queryByText('Architecture Review')).not.toBeInTheDocument();
     expect(screen.queryByText('Kickoff')).not.toBeInTheDocument();
   });
 
@@ -332,12 +222,12 @@ describe('Program workspace', () => {
     });
     renderApp('/programs/alpha-program');
 
-    const storedHeading = await screen.findByRole('heading', { level: 2, name: 'Stored Program Actions' });
-    expect(storedHeading.compareDocumentPosition(screen.getByText('Confirm rollout cohort')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const actionsSection = await screen.findByRole('region', { name: 'Actions' });
+    expect(within(actionsSection).getByText('Confirm rollout cohort')).toBeInTheDocument();
     expect(screen.queryByText('Internal Technical Kickoff')).not.toBeInTheDocument();
-    expect(screen.getByText('Status: open')).toBeInTheDocument();
-    expect(screen.getByText('Owner: Operations')).toBeInTheDocument();
-    expect(screen.getByText('Due: 2026-08-01')).toBeInTheDocument();
+    expect(within(actionsSection).getAllByText('Status')).toHaveLength(2);
+    expect(within(actionsSection).getByText('Operations')).toBeInTheDocument();
+    expect(within(actionsSection).getByText('Aug 1, 2026')).toBeInTheDocument();
   });
 
   it('renders strict canonical stored risks and their optional treatment details', async () => {
@@ -351,13 +241,13 @@ describe('Program workspace', () => {
       })],
     });
     renderApp('/programs/alpha-program');
-    expect(await screen.findByRole('heading', { level: 2, name: 'Stored Risks' })).toBeInTheDocument();
-    expect(screen.getByText('Stored delivery risk')).toBeInTheDocument();
-    expect(screen.getByText('Owner: Change Lead')).toBeInTheDocument();
-    expect(screen.getByText('Probability: high')).toBeInTheDocument();
-    expect(screen.getByText('Impact: critical')).toBeInTheDocument();
-    expect(screen.getByText('Mitigation: Run readiness reviews')).toBeInTheDocument();
-    expect(screen.getByText('Accepted by: Executive Sponsor')).toBeInTheDocument();
+    const risksSection = await screen.findByRole('region', { name: 'Risks' });
+    expect(within(risksSection).getByText('Stored delivery risk')).toBeInTheDocument();
+    expect(within(risksSection).getByText('Change Lead')).toBeInTheDocument();
+    expect(within(risksSection).getByText('high')).toBeInTheDocument();
+    expect(within(risksSection).getByText('critical')).toBeInTheDocument();
+    expect(within(risksSection).getByText('Run readiness reviews')).toBeInTheDocument();
+    expect(within(risksSection).getByText('Executive Sponsor')).toBeInTheDocument();
   });
 
   it('rejects a malformed canonical stored risk payload', async () => {
@@ -374,11 +264,11 @@ describe('Program workspace', () => {
       resolution_summary: 'Access granted', resolved_at: '2026-07-22T12:00:00Z',
     })] });
     renderApp('/programs/alpha-program');
-    expect(await screen.findByRole('heading', { level: 2, name: 'Stored Issues' })).toBeInTheDocument();
-    expect(screen.getByText('Stored access issue')).toBeInTheDocument();
-    expect(screen.getByText('Owner: Operations')).toBeInTheDocument();
+    const issuesSection = await screen.findByRole('region', { name: 'Issues' });
+    expect(within(issuesSection).getByText('Stored access issue')).toBeInTheDocument();
+    expect(within(issuesSection).getByText('Operations')).toBeInTheDocument();
     expect(screen.getByLabelText('Severity: High')).toBeInTheDocument();
-    expect(screen.getByText('Resolution: Access granted')).toBeInTheDocument();
+    expect(within(issuesSection).getByText('Access granted')).toBeInTheDocument();
   });
 
   it('rejects a malformed canonical stored issue payload', async () => {
@@ -391,10 +281,10 @@ describe('Program workspace', () => {
   it('strictly parses and renders canonical stored dependencies read-only', async () => {
     mockFetchOnce({ ...alpha, dependencies: [canonicalDependency()] });
     renderApp('/programs/alpha-program');
-    expect(await screen.findByRole('heading', { level: 2, name: 'Stored Dependencies' })).toBeInTheDocument();
-    expect(screen.getByText('Vendor circuit')).toBeInTheDocument();
-    expect(screen.getByText('Type: vendor')).toBeInTheDocument();
-    expect(screen.getByText('Owner: Network Lead')).toBeInTheDocument();
+    const dependenciesSection = await screen.findByRole('region', { name: 'Dependencies' });
+    expect(within(dependenciesSection).getByText('Vendor circuit')).toBeInTheDocument();
+    expect(within(dependenciesSection).getByText('vendor')).toBeInTheDocument();
+    expect(within(dependenciesSection).getByText('Network Lead')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /edit dependency/i })).not.toBeInTheDocument();
   });
 
@@ -410,9 +300,9 @@ describe('Program workspace', () => {
     renderApp('/programs/alpha-program');
     expect(await screen.findByRole('heading', { level: 2, name: 'Decision Records' })).toBeInTheDocument();
     expect(screen.getByText('Approve staged rollout')).toBeInTheDocument();
-    expect(screen.getByText('Decision: Use three deployment waves')).toBeInTheDocument();
-    expect(screen.getByText('Rationale: Limits operational exposure')).toBeInTheDocument();
-    expect(screen.getByText('Alternatives considered: Big bang')).toBeInTheDocument();
+    expect(screen.getByText('Use three deployment waves')).toBeInTheDocument();
+    expect(screen.getByText('Limits operational exposure')).toBeInTheDocument();
+    expect(screen.getByText('Big bang')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /edit decision/i })).not.toBeInTheDocument();
   });
 
@@ -427,13 +317,12 @@ describe('Program workspace', () => {
     mockFetchOnce(alpha);
     renderApp('/programs/alpha-program');
 
-    const headerGrid = await screen.findByTestId('executive-header-status-grid');
-    const healthGrid = screen.getByTestId('program-health-grid');
-    expect(within(headerGrid).getByText('Current Phase')).toBeInTheDocument();
-    expect(within(headerGrid).getByText('Health')).toBeInTheDocument();
-    expect(within(headerGrid).getByText('Confidence')).toBeInTheDocument();
-    expect(headerGrid.querySelectorAll('.MuiGrid2-grid-xs-12')).toHaveLength(3);
-    expect(healthGrid.querySelectorAll('.MuiGrid2-grid-xs-12')).toHaveLength(3);
+    const healthGrid = await screen.findByTestId('program-health-grid');
+    expect(within(healthGrid).getByText('Program Health')).toBeInTheDocument();
+    expect(within(healthGrid).getByText('Confidence')).toBeInTheDocument();
+    expect(within(healthGrid).getByText('Lifecycle Phase')).toBeInTheDocument();
+    expect(within(healthGrid).getByText('Collections')).toBeInTheDocument();
+    expect(healthGrid.querySelectorAll('.MuiGrid2-grid-xs-12')).toHaveLength(4);
   });
 
   it('renders a structured 404 and returns to Programs', async () => {
@@ -460,33 +349,4 @@ describe('Program workspace', () => {
     expect(capturedSignal?.aborted).toBe(true);
   });
 
-  it('aborts an active intelligence request on unmount', async () => {
-    let intelligenceSignal: AbortSignal | undefined;
-    vi.spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(jsonResponse(alpha))
-      .mockImplementationOnce((_input, init) => {
-        intelligenceSignal = init?.signal ?? undefined;
-        return new Promise(() => {});
-      });
-    const view = renderApp('/programs/alpha-program');
-    fireEvent.click(await screen.findByRole('button', { name: 'Generate Intelligence' }));
-    expect(intelligenceSignal?.aborted).toBe(false);
-    view.unmount();
-    expect(intelligenceSignal?.aborted).toBe(true);
-  });
-
-  it('ignores an intelligence response that resolves after its workspace is gone', async () => {
-    let resolveStale!: (response: Response) => void;
-    vi.spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(jsonResponse(alpha))
-      .mockImplementationOnce(() => new Promise((resolve) => { resolveStale = resolve; }))
-      .mockResolvedValueOnce(jsonResponse({ ...alpha, program_id: 'beta-program', program_name: 'Beta Program' }));
-    const first = renderApp('/programs/alpha-program');
-    fireEvent.click(await screen.findByRole('button', { name: 'Generate Intelligence' }));
-    first.unmount();
-    renderApp('/programs/beta-program');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Beta Program' })).toBeInTheDocument();
-    resolveStale(jsonResponse(aiIntelligence));
-    await waitFor(() => expect(screen.queryByText('Grounded AI intelligence summary.')).not.toBeInTheDocument());
-  });
 });

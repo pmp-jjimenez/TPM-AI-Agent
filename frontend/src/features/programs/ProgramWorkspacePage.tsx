@@ -1,43 +1,24 @@
-import { Box, Button, Divider, Grid2, Paper, Stack, Typography } from '@mui/material';
-import { useEffect, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import { Button, Grid2, Stack, Typography } from '@mui/material';
+import { useEffect, useState } from 'react';
 import { Link as RouterLink, useParams } from 'react-router-dom';
 import { ApiError } from '../../api/client';
 import { ErrorState } from '../../components/feedback/ErrorState';
 import { LoadingState } from '../../components/feedback/LoadingState';
 import { PageContainer } from '../../components/layout/PageContainer';
-import { ConfidenceBadge, HealthStatusBadge, PhaseBadge, SeverityBadge } from '../../components/ui/StatusBadges';
+import { SeverityBadge } from '../../components/ui/StatusBadges';
+import { SectionHeader } from '../../components/ui/Primitives';
 import {
-  MetadataGrid,
-  IntelligenceResult,
-  SectionHeader,
-  StatusCard,
-} from './ExecutiveWorkspaceComponents';
-import { getProgram, getProgramIntelligence } from './programApi';
-import type { IntelligenceResponse, ProgramAction, ProgramDecisionRecord, ProgramDependency, ProgramIssue, ProgramRecord, ProgramRisk } from './programTypes';
+  AIAssessmentCard,
+  ExecutiveMetricCard,
+  MissionHeader,
+  OperationalSection,
+  PriorityCard,
+  type OperationalItem,
+  type PriorityItem,
+} from './MissionControlComponents';
+import { getProgram } from './programApi';
+import type { ProgramRecord } from './programTypes';
 import { usableText } from './programTypes';
-
-interface Milestone { date?: string; title: string; description?: string; status?: string }
-function milestones(program: ProgramRecord): Milestone[] {
-  return (program.milestones ?? []).flatMap((entry) => {
-    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
-    const record = entry as Record<string, unknown>;
-    const title = usableText(record.title) ?? usableText(record.name);
-    if (!title) return [];
-    return [{
-      title,
-      date: usableText(record.date) ?? usableText(record.target_date),
-      description: usableText(record.description),
-      status: usableText(record.status),
-    }];
-  });
-}
-
-function storedActions(program: ProgramRecord): ProgramAction[] { return program.next_actions ?? []; }
-function storedRisks(program: ProgramRecord): ProgramRisk[] { return program.risks ?? []; }
-function storedIssues(program: ProgramRecord): ProgramIssue[] { return program.issues ?? []; }
-function storedDependencies(program: ProgramRecord): ProgramDependency[] { return program.dependencies ?? []; }
-function storedDecisions(program: ProgramRecord): ProgramDecisionRecord[] { return program.decisions ?? []; }
 
 function displayDate(value: unknown): string | undefined {
   const text = usableText(value);
@@ -48,25 +29,61 @@ function displayDate(value: unknown): string | undefined {
   return new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }).format(parsed);
 }
 
-function executiveSummary(program: ProgramRecord): string {
-  const description = usableText(program.description);
-  if (!description) return 'Available program information is insufficient to provide an executive summary.';
-  const facts = [
-    usableText(program.customer) ? `Customer: ${usableText(program.customer)}.` : undefined,
-    usableText(program.phase) ? `Current phase: ${usableText(program.phase)}.` : undefined,
-    usableText(program.health) ? `Health: ${usableText(program.health)}.` : undefined,
-    usableText(program.confidence) ? `Confidence: ${usableText(program.confidence)}.` : undefined,
-  ].filter(Boolean).join(' ');
-  return `${description}${facts ? ` ${facts}` : ''}`;
+function ownerName(owner: { display_name: string } | null): string | undefined { return owner?.display_name; }
+function detail(label: string, value?: string | null) { return { label, value }; }
+
+function riskItems(program: ProgramRecord): OperationalItem[] {
+  return (program.risks ?? []).map((risk) => ({
+    id: risk.object_id, title: risk.title, status: risk.status,
+    badge: risk.priority ? <SeverityBadge value={risk.priority} /> : undefined,
+    details: [detail('Status', risk.status), detail('Owner', ownerName(risk.owner)), detail('Probability', risk.probability), detail('Impact', risk.impact), detail('Review', displayDate(risk.review_date)), detail('Mitigation', risk.mitigation_plan), detail('Accepted by', risk.status === 'accepted' ? ownerName(risk.accepted_by) : undefined)],
+  }));
 }
 
-function WorkspaceSection({ children, title, description }: { children: ReactNode; title: string; description?: string }) {
-  return (
-    <Stack component="section" spacing={2}>
-      <SectionHeader title={title} description={description} />
-      {children}
-    </Stack>
-  );
+function issueItems(program: ProgramRecord): OperationalItem[] {
+  return (program.issues ?? []).map((issue) => ({
+    id: issue.object_id, title: issue.title, status: issue.status,
+    badge: issue.severity ? <SeverityBadge value={issue.severity} /> : undefined,
+    details: [detail('Status', issue.status), detail('Owner', ownerName(issue.owner)), detail('Due', displayDate(issue.due_date)), detail('Impact', issue.impact), detail('Resolution', issue.resolution_summary), detail('Resolved', displayDate(issue.resolved_at))],
+  }));
+}
+
+function dependencyItems(program: ProgramRecord): OperationalItem[] {
+  return (program.dependencies ?? []).map((dependency) => ({
+    id: dependency.object_id, title: dependency.title, status: dependency.status,
+    details: [detail('Status', dependency.status), detail('Type', dependency.dependency_type), detail('Owner', ownerName(dependency.owner)), detail('Depends on', dependency.depends_on), detail('External party', dependency.external_party), detail('Required by', displayDate(dependency.required_by_date)), detail('Impact', dependency.impact), detail('Mitigation', dependency.mitigation_plan)],
+  }));
+}
+
+function decisionItems(program: ProgramRecord): OperationalItem[] {
+  return (program.decisions ?? []).map((decision) => ({
+    id: decision.object_id, title: decision.title, status: decision.status,
+    details: [detail('Status', decision.status), detail('Decision', decision.decision), detail('Rationale', decision.rationale), detail('Owner', ownerName(decision.owner)), detail('Decision date', displayDate(decision.decision_date)), detail('Review date', displayDate(decision.review_date)), detail('Impact', decision.impact), detail('Alternatives considered', decision.alternatives_considered.join('; ') || undefined)],
+  }));
+}
+
+function actionItems(program: ProgramRecord): OperationalItem[] {
+  return (program.next_actions ?? []).map((action) => ({
+    id: action.object_id, title: action.title, status: action.status,
+    badge: action.priority ? <SeverityBadge value={action.priority} /> : undefined,
+    details: [detail('Status', action.status), detail('Owner', ownerName(action.owner)), detail('Due', displayDate(action.due_date)), detail('Description', action.description), detail('Completion summary', action.completion_summary)],
+  }));
+}
+
+function priorities(program: ProgramRecord): PriorityItem[] {
+  const criticalIssue = (program.issues ?? []).find((item) => item.status !== 'closed' && item.status !== 'resolved' && item.severity === 'critical');
+  const criticalRisk = (program.risks ?? []).find((item) => item.status !== 'closed' && (item.priority === 'critical' || item.impact === 'critical'));
+  const blockedAction = (program.next_actions ?? []).find((item) => item.status === 'blocked');
+  const openDependency = (program.dependencies ?? []).find((item) => item.status === 'open' || item.status === 'in_progress');
+  const nextAction = (program.next_actions ?? []).find((item) => item.status === 'open' || item.status === 'in_progress');
+  const signals: PriorityItem[] = [];
+  if (criticalIssue) signals.push({ id: `issue-${criticalIssue.object_id}`, title: `Address issue: ${criticalIssue.title}`, detail: 'A critical open issue requires review.', tone: 'critical' });
+  if (criticalRisk) signals.push({ id: `risk-${criticalRisk.object_id}`, title: `Review risk: ${criticalRisk.title}`, detail: criticalRisk.review_date ? `Review date: ${displayDate(criticalRisk.review_date)}` : 'Critical exposure is recorded.', tone: 'critical' });
+  if (blockedAction) signals.push({ id: `action-${blockedAction.object_id}`, title: `Unblock action: ${blockedAction.title}`, detail: ownerName(blockedAction.owner) ? `Owner: ${ownerName(blockedAction.owner)}` : 'No owner is recorded.', tone: 'attention' });
+  if (openDependency) signals.push({ id: `dependency-${openDependency.object_id}`, title: `Track dependency: ${openDependency.title}`, detail: openDependency.required_by_date ? `Required by ${displayDate(openDependency.required_by_date)}` : 'No required-by date is recorded.', tone: 'attention' });
+  if (!signals.length && nextAction) signals.push({ id: `next-${nextAction.object_id}`, title: nextAction.title, detail: nextAction.due_date ? `Due ${displayDate(nextAction.due_date)}` : 'This is the next stored program action.', tone: 'neutral' });
+  if (!signals.length) signals.push({ id: 'clear', title: 'No critical blockers detected', detail: 'No critical open issue, risk, or blocked action is recorded.', tone: 'clear' });
+  return signals.slice(0, 4);
 }
 
 export function ProgramWorkspacePage() {
@@ -74,11 +91,6 @@ export function ProgramWorkspacePage() {
   const [program, setProgram] = useState<ProgramRecord | null>(null);
   const [error, setError] = useState<unknown>();
   const [requestVersion, setRequestVersion] = useState(0);
-  const [intelligence, setIntelligence] = useState<IntelligenceResponse | null>(null);
-  const [intelligenceError, setIntelligenceError] = useState(false);
-  const [intelligenceLoading, setIntelligenceLoading] = useState(false);
-  const intelligenceSequence = useRef(0);
-  const intelligenceController = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -88,238 +100,57 @@ export function ProgramWorkspacePage() {
       setError(new ApiError('malformed', 'A valid program identifier is required.'));
       return () => controller.abort();
     }
-    getProgram(programId, controller.signal)
-      .then(setProgram)
-      .catch((requestError) => {
-        if (!(requestError instanceof ApiError && requestError.kind === 'aborted')) setError(requestError);
-      });
+    getProgram(programId, controller.signal).then(setProgram).catch((requestError) => {
+      if (!(requestError instanceof ApiError && requestError.kind === 'aborted')) setError(requestError);
+    });
     return () => controller.abort();
   }, [programId, requestVersion]);
 
-  useEffect(() => {
-    intelligenceController.current?.abort();
-    intelligenceSequence.current += 1;
-    setIntelligence(null);
-    setIntelligenceError(false);
-    setIntelligenceLoading(false);
-    return () => {
-      intelligenceController.current?.abort();
-      intelligenceSequence.current += 1;
-    };
-  }, [programId]);
-
-  const generateIntelligence = () => {
-    if (!programId || intelligenceLoading) return;
-    const request = intelligenceSequence.current + 1;
-    intelligenceSequence.current = request;
-    setIntelligenceLoading(true);
-    setIntelligenceError(false);
-    const controller = new AbortController();
-    intelligenceController.current = controller;
-    const activeProgramId = programId;
-    getProgramIntelligence(programId, controller.signal)
-      .then((result) => {
-        if (request === intelligenceSequence.current && activeProgramId === programId) setIntelligence(result);
-      })
-      .catch((requestError) => {
-        if (!(requestError instanceof ApiError && requestError.kind === 'aborted') && request === intelligenceSequence.current && activeProgramId === programId) setIntelligenceError(true);
-      })
-      .finally(() => {
-        if (request === intelligenceSequence.current && activeProgramId === programId) setIntelligenceLoading(false);
-      });
-  };
-
   const retry = <Button variant="outlined" onClick={() => setRequestVersion((value) => value + 1)}>Retry</Button>;
+  if (error instanceof ApiError && error.status === 404) return <PageContainer><ErrorState title="Program not found." message="The requested program is not available." action={<Button component={RouterLink} to="/programs" variant="contained">Return to Programs</Button>} /></PageContainer>;
+  if (error) return <PageContainer><ErrorState title={error instanceof ApiError && error.kind === 'configuration' ? 'API configuration required' : 'Program could not be loaded'} message={error instanceof ApiError && error.kind === 'configuration' ? error.message : error instanceof ApiError && error.kind === 'network' ? 'Check your connection and confirm the API is running, then try again.' : 'The server could not load this program. Please try again.'} action={error instanceof ApiError && error.kind === 'configuration' ? undefined : retry} /></PageContainer>;
+  if (!program) return <PageContainer><LoadingState message="Loading program mission control" /></PageContainer>;
 
-  if (error instanceof ApiError && error.status === 404) {
-    return <PageContainer><ErrorState title="Program not found." message="The requested program is not available." action={<Button component={RouterLink} to="/programs" variant="contained">Return to Programs</Button>} /></PageContainer>;
-  }
-  if (error) {
-    return (
-      <PageContainer><ErrorState
-        title={error instanceof ApiError && error.kind === 'configuration' ? 'API configuration required' : 'Program could not be loaded'}
-        message={error instanceof ApiError && error.kind === 'configuration' ? error.message : error instanceof ApiError && error.kind === 'network' ? 'Check your connection and confirm the API is running, then try again.' : 'The server could not load this program. Please try again.'}
-        action={error instanceof ApiError && error.kind === 'configuration' ? undefined : retry}
-      /></PageContainer>
-    );
-  }
-  if (!program) return <PageContainer><LoadingState message="Loading program workspace" /></PageContainer>;
-
-  const timeline = milestones(program);
-  const actions = storedActions(program);
-  const risks = storedRisks(program);
-  const issues = storedIssues(program);
-  const dependencies = storedDependencies(program);
-  const decisions = storedDecisions(program);
+  const risks = riskItems(program);
+  const issues = issueItems(program);
+  const dependencies = dependencyItems(program);
+  const decisions = decisionItems(program);
+  const actions = actionItems(program);
+  const collectionCount = risks.length + issues.length + dependencies.length + decisions.length + actions.length;
 
   return (
     <PageContainer>
       <Stack spacing={{ xs: 4, md: 5 }}>
-        <Paper component="header" variant="outlined" sx={{ p: { xs: 2.5, sm: 3.5 }, overflow: 'hidden' }}>
-          <Typography variant="pageEyebrow" color="text.muted">Program Workspace</Typography>
-          <Typography component="h1" variant="pageTitle" sx={{ mt: 0.5, overflowWrap: 'anywhere' }}>
-            {usableText(program.program_name) ?? 'Program name unavailable'}
-          </Typography>
-          <Typography variant="metadata" color="text.muted" sx={{ mt: 0.75, overflowWrap: 'anywhere' }}>Program ID: {program.program_id}</Typography>
-          <Grid2 container spacing={1.5} sx={{ mt: 2 }} data-testid="executive-header-status-grid">
-            <Grid2 size={{ xs: 12, sm: 4 }}><StatusCard label="Current Phase" value={<PhaseBadge value={usableText(program.phase)} />} /></Grid2>
-            <Grid2 size={{ xs: 12, sm: 4 }}><StatusCard label="Health" value={<HealthStatusBadge value={usableText(program.health)} />} /></Grid2>
-            <Grid2 size={{ xs: 12, sm: 4 }}><StatusCard label="Confidence" value={<ConfidenceBadge value={usableText(program.confidence)} />} /></Grid2>
-          </Grid2>
-        </Paper>
+        <MissionHeader name={usableText(program.program_name) ?? 'Program name unavailable'} description={usableText(program.description)} programId={program.program_id} phase={usableText(program.phase)} health={usableText(program.health)} confidence={usableText(program.confidence)} updatedAt={displayDate(program.metadata?.updated_at)} />
 
-        <WorkspaceSection title="Executive Summary">
-          <Typography sx={{ maxWidth: 900, fontSize: '1.05rem', lineHeight: 1.7 }}>{executiveSummary(program)}</Typography>
-        </WorkspaceSection>
-
-        <WorkspaceSection title="Program Health" description="Reported program values; no composite score is calculated.">
+        <Stack component="section" spacing={2} aria-label="Executive health summary">
+          <SectionHeader title="Executive Health Summary" description="The current reported state of this program." />
           <Grid2 container spacing={1.5} data-testid="program-health-grid">
-            <Grid2 size={{ xs: 12, md: 4 }}><StatusCard label="Current Phase" value={<PhaseBadge value={usableText(program.phase)} />} /></Grid2>
-            <Grid2 size={{ xs: 12, md: 4 }}><StatusCard label="Health" value={<HealthStatusBadge value={usableText(program.health)} />} /></Grid2>
-            <Grid2 size={{ xs: 12, md: 4 }}><StatusCard label="Confidence" value={<ConfidenceBadge value={usableText(program.confidence)} />} /></Grid2>
+            <Grid2 size={{ xs: 12, sm: 6, lg: 3 }}><ExecutiveMetricCard label="Program Health" value={usableText(program.health) ?? '—'} supportingText="Reported health" /></Grid2>
+            <Grid2 size={{ xs: 12, sm: 6, lg: 3 }}><ExecutiveMetricCard label="Confidence" value={usableText(program.confidence) ?? '—'} supportingText="Reported confidence" /></Grid2>
+            <Grid2 size={{ xs: 12, sm: 6, lg: 3 }}><ExecutiveMetricCard label="Lifecycle Phase" value={usableText(program.phase) ?? '—'} supportingText="Current program phase" /></Grid2>
+            <Grid2 size={{ xs: 12, sm: 6, lg: 3 }}><ExecutiveMetricCard label="Collections" value={collectionCount} supportingText="Operational records" /></Grid2>
           </Grid2>
-        </WorkspaceSection>
+        </Stack>
 
-        <WorkspaceSection title="Project Overview">
-          <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 } }}>
-            <MetadataGrid items={[
-              { label: 'Customer', value: usableText(program.customer) },
-              { label: 'Description', value: usableText(program.description) },
-              { label: 'Source', value: usableText(program.metadata?.source) },
-              { label: 'Created', value: displayDate(program.metadata?.created_at) },
-              { label: 'Last Updated', value: displayDate(program.metadata?.updated_at) },
-            ]} />
-          </Paper>
-        </WorkspaceSection>
+        <Grid2 container spacing={2} alignItems="stretch">
+          <Grid2 size={{ xs: 12, md: 5 }}><PriorityCard items={priorities(program)} /></Grid2>
+          <Grid2 size={{ xs: 12, md: 7 }}><AIAssessmentCard /></Grid2>
+        </Grid2>
 
-        <WorkspaceSection title="Timeline" description="Only milestones explicitly stored with the program are shown.">
-          {timeline.length ? (
-            <Paper variant="outlined" sx={{ p: { xs: 2, sm: 3 } }}>
-              <Stack spacing={2.5} divider={<Divider />}>
-                {timeline.map((milestone, index) => (
-                  <Stack key={`${milestone.title}-${index}`} spacing={0.5}>
-                    {milestone.date ? <Typography variant="caption" color="text.secondary">{displayDate(milestone.date)}</Typography> : null}
-                    <Typography fontWeight={650}>{milestone.title}</Typography>
-                    {milestone.description ? <Typography>{milestone.description}</Typography> : null}
-                    {milestone.status ? <Typography variant="caption" color="text.secondary">Status: {milestone.status}</Typography> : null}
-                  </Stack>
-                ))}
-              </Stack>
-            </Paper>
-          ) : (
-            <Paper variant="outlined" sx={{ p: { xs: 3, sm: 4 }, textAlign: 'center', bgcolor: 'background.subtle' }}>
-              <Typography fontWeight={650}>No milestones recorded</Typography>
-              <Typography color="text.secondary" sx={{ mt: 0.5 }}>This program does not contain supported milestone records.</Typography>
-            </Paper>
-          )}
-        </WorkspaceSection>
-
-        <WorkspaceSection title="Stored Program Actions" description="Actions persisted with the program; generated intelligence remains separate and read-only.">
-          <Stack spacing={1.5}>
-                {actions.length ? actions.map((action) => (
-                  <Paper key={action.object_id} variant="outlined" sx={{ p: 2 }}>
-                    <Typography fontWeight={600}>{action.title}</Typography>
-                    {[`Status: ${action.status}`, action.owner && `Owner: ${action.owner.display_name}`, action.due_date && `Due: ${action.due_date}`]
-                      .filter(Boolean).map((detail) => <Typography key={detail} variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>{detail}</Typography>)}
-                  </Paper>
-                )) : <Typography color="text.secondary">No stored program actions are available.</Typography>}
-          </Stack>
-        </WorkspaceSection>
-
-        <WorkspaceSection title="Stored Risks" description="Canonical risks explicitly persisted with the program.">
-          <Stack spacing={1.5}>
-            {risks.length ? risks.map((risk) => (
-              <Paper key={risk.object_id} variant="outlined" sx={{ p: 2 }}>
-                <Typography fontWeight={600}>{risk.title}</Typography>
-                {[
-                  `Status: ${risk.status}`,
-                  risk.owner && `Owner: ${risk.owner.display_name}`,
-                  risk.probability && `Probability: ${risk.probability}`,
-                  risk.impact && `Impact: ${risk.impact}`,
-                  risk.priority && `Priority: ${risk.priority}`,
-                  risk.review_date && `Review date: ${risk.review_date}`,
-                  risk.mitigation_plan && `Mitigation: ${risk.mitigation_plan}`,
-                  risk.status === 'accepted' && risk.accepted_by && `Accepted by: ${risk.accepted_by.display_name}`,
-                  risk.status === 'accepted' && risk.acceptance_rationale && `Acceptance rationale: ${risk.acceptance_rationale}`,
-                ].filter(Boolean).map((detail) => <Typography key={String(detail)} variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>{detail}</Typography>)}
-              </Paper>
-            )) : <Typography color="text.secondary">No stored program risks are available.</Typography>}
-          </Stack>
-        </WorkspaceSection>
-
-        <WorkspaceSection title="Stored Issues" description="Canonical issues explicitly persisted with the program.">
-          <Stack spacing={1.5}>
-            {issues.length ? issues.map((issue) => (
-              <Paper key={issue.object_id} variant="outlined" sx={{ p: 2 }}>
-                    <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontWeight={600}>{issue.title}</Typography>{issue.severity ? <SeverityBadge value={issue.severity} /> : null}</Stack>
-                {[
-                  `Status: ${issue.status}`,
-                  issue.owner && `Owner: ${issue.owner.display_name}`,
-                  issue.due_date && `Due date: ${issue.due_date}`,
-                  issue.impact && `Impact: ${issue.impact}`,
-                  issue.resolution_summary && `Resolution: ${issue.resolution_summary}`,
-                  issue.resolved_at && `Resolved: ${issue.resolved_at}`,
-                ].filter(Boolean).map((detail) => <Typography key={String(detail)} variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>{detail}</Typography>)}
-              </Paper>
-            )) : <Typography color="text.secondary">No stored program issues are available.</Typography>}
-          </Stack>
-        </WorkspaceSection>
-
-        <WorkspaceSection title="Stored Dependencies" description="Canonical dependencies explicitly persisted with the program.">
-          <Stack spacing={1.5}>
-            {dependencies.length ? dependencies.map((dependency) => (
-              <Paper key={dependency.object_id} variant="outlined" sx={{ p: 2 }}>
-                <Typography fontWeight={600}>{dependency.title}</Typography>
-                {[
-                  `Status: ${dependency.status}`, `Type: ${dependency.dependency_type}`,
-                  dependency.owner && `Owner: ${dependency.owner.display_name}`,
-                  dependency.depends_on && `Depends on: ${dependency.depends_on}`,
-                  dependency.external_party && `External party: ${dependency.external_party}`,
-                  dependency.required_by_date && `Required by: ${dependency.required_by_date}`,
-                  dependency.impact && `Impact: ${dependency.impact}`,
-                  dependency.mitigation_plan && `Mitigation: ${dependency.mitigation_plan}`,
-                ].filter(Boolean).map((detail) => <Typography key={String(detail)} variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>{detail}</Typography>)}
-              </Paper>
-            )) : <Typography color="text.secondary">No stored program dependencies are available.</Typography>}
-          </Stack>
-        </WorkspaceSection>
-
-        <WorkspaceSection title="Decision Records" description="Canonical decisions explicitly persisted with the program; this view is read-only.">
-          <Stack spacing={1.5}>
-            {decisions.length ? decisions.map((decision) => (
-              <Paper key={decision.object_id} variant="outlined" sx={{ p: 2 }}>
-                <Typography fontWeight={600}>{decision.title}</Typography>
-                {[
-                  `Status: ${decision.status}`,
-                  decision.decision && `Decision: ${decision.decision}`,
-                  decision.rationale && `Rationale: ${decision.rationale}`,
-                  decision.owner && `Owner: ${decision.owner.display_name}`,
-                  decision.decision_date && `Decision date: ${decision.decision_date}`,
-                  decision.review_date && `Review date: ${decision.review_date}`,
-                  decision.impact && `Impact: ${decision.impact}`,
-                  decision.alternatives_considered.length && `Alternatives considered: ${decision.alternatives_considered.join('; ')}`,
-                ].filter(Boolean).map((detail) => <Typography key={String(detail)} variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>{detail}</Typography>)}
-              </Paper>
-            )) : <Typography color="text.secondary">No decision records are available.</Typography>}
-          </Stack>
-        </WorkspaceSection>
-
-        <WorkspaceSection title="Intelligence" description="Generate current decision support on demand. Results are not persisted.">
-          <Stack spacing={2}>
-            <Box><Button variant={intelligence ? 'outlined' : 'contained'} disabled={intelligenceLoading} onClick={generateIntelligence}>
-              {intelligenceLoading ? 'Generating Intelligence…' : intelligence ? 'Refresh Intelligence' : intelligenceError ? 'Retry Intelligence' : 'Generate Intelligence'}
-            </Button></Box>
-            {intelligenceLoading ? <LoadingState message="Generating workspace intelligence" /> : null}
-            {intelligenceError && !intelligenceLoading ? (
-              <ErrorState title="Intelligence is unavailable" message="The workspace remains available. Try generating intelligence again when the service is reachable." />
-            ) : null}
-            {!intelligence && !intelligenceLoading && !intelligenceError ? (
-              <Paper variant="outlined" sx={{ p: 3, bgcolor: 'background.subtle' }}><Typography color="text.secondary">Intelligence has not been generated for this workspace session.</Typography></Paper>
-            ) : null}
-            {intelligence && !intelligenceLoading ? <IntelligenceResult intelligence={intelligence} /> : null}
-          </Stack>
-        </WorkspaceSection>
+        <Stack spacing={{ xs: 4, md: 5 }} component="section" aria-labelledby="operational-workspace-title">
+          <BoxTitle />
+          <OperationalSection title="Risks" description="Threats to delivery outcomes and their current treatment." items={risks} emptyMessage="No canonical risks are stored for this program." />
+          <OperationalSection title="Issues" description="Active delivery problems requiring resolution." items={issues} emptyMessage="No canonical issues are stored for this program." />
+          <OperationalSection title="Dependencies" description="Internal and external commitments affecting delivery." items={dependencies} emptyMessage="No canonical dependencies are stored for this program." />
+          <OperationalSection title="Decision Records" description="Program decisions and their recorded rationale." items={decisions} emptyMessage="No decision records are stored for this program." />
+          <OperationalSection title="Actions" description="Committed next steps and accountable owners." items={actions} emptyMessage="No program actions are stored for this program." />
+        </Stack>
       </Stack>
     </PageContainer>
   );
+}
+
+function BoxTitle() {
+  return <Stack spacing={0.5}><Typography id="operational-workspace-title" component="h2" variant="sectionTitle">Operational Workspace</Typography><Typography variant="supporting" color="text.secondary">Read-only program records organized for rapid operational review.</Typography></Stack>;
 }

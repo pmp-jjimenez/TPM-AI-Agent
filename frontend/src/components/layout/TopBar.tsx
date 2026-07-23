@@ -13,7 +13,7 @@ interface TopBarProps {
 
 function pageTitle(pathname: string) {
   if (pathname === '/programs') return 'Programs';
-  if (pathname.startsWith('/programs/')) return 'Program Workspace';
+  if (pathname.startsWith('/programs/')) return 'Program Mission Control';
   return 'Workspace';
 }
 
