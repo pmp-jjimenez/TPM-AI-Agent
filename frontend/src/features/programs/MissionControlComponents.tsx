@@ -15,9 +15,8 @@ export interface MissionHeaderProps {
 
 export function MissionHeader({ name, description, programId, phase, health, confidence, updatedAt }: MissionHeaderProps) {
   return (
-    <Surface component="header" sx={{ position: 'relative', overflow: 'hidden', p: { xs: 2.5, sm: 4 }, borderTop: '4px solid', borderTopColor: 'primary.main' }}>
-      <Box aria-hidden sx={{ position: 'absolute', width: 240, height: 240, borderRadius: '50%', bgcolor: 'primary.light', opacity: 0.45, right: -100, top: -130 }} />
-      <Stack spacing={2.5} sx={{ position: 'relative' }}>
+    <Surface component="header" sx={{ p: { xs: 2.75, sm: 4 }, borderTop: '3px solid', borderTopColor: 'primary.main' }}>
+      <Stack spacing={3}>
         <Box>
           <Typography variant="pageEyebrow" color="primary.main">Program Mission Control</Typography>
           <Typography component="h1" variant="pageTitle" sx={{ mt: 0.75, overflowWrap: 'anywhere', maxWidth: 860 }}>{name}</Typography>
@@ -41,7 +40,7 @@ export function MissionHeader({ name, description, programId, phase, health, con
 
 export function ExecutiveMetricCard({ label, value, supportingText }: { label: string; value: ReactNode; supportingText?: string }) {
   return (
-    <Surface component="article" aria-label={label} sx={{ p: 2.25, height: '100%' }}>
+    <Surface component="article" aria-label={label} sx={{ p: { xs: 2.25, md: 2.5 }, height: '100%' }}>
       <MetricDisplay label={label} value={value as string | number} />
       {supportingText ? <Typography variant="supporting" color="text.muted" sx={{ display: 'block', mt: 1.25 }}>{supportingText}</Typography> : null}
     </Surface>
@@ -60,9 +59,9 @@ const priorityTone = {
 
 export function PriorityCard({ items }: { items: PriorityItem[] }) {
   return (
-    <Surface component="section" aria-label="Today's Priorities" sx={{ p: { xs: 2.25, sm: 3 }, height: '100%' }}>
+    <Surface component="section" aria-label="Today's Priorities" sx={{ p: { xs: 2.5, sm: 3.25 }, height: '100%' }}>
       <SectionHeader title="Today's Priorities" description="Signals derived from current program records." />
-      <Stack spacing={1.25} sx={{ mt: 2.25 }}>
+      <Stack spacing={1.25} sx={{ mt: 2.5 }}>
         {items.map((item) => (
           <Stack key={item.id} direction="row" gap={1.5} alignItems="flex-start" sx={{ p: 1.5, border: '1px solid', borderRadius: 1.25, ...priorityTone[item.tone] }}>
             <Box aria-hidden sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'currentColor', mt: 0.75, flexShrink: 0 }} />
@@ -76,7 +75,7 @@ export function PriorityCard({ items }: { items: PriorityItem[] }) {
 
 export function AIAssessmentCard() {
   return (
-    <Surface component="section" aria-labelledby="ai-assessment-title" sx={{ p: { xs: 2.25, sm: 3 }, height: '100%', bgcolor: 'primary.light', borderColor: 'primary.main' }}>
+    <Surface component="section" aria-labelledby="ai-assessment-title" sx={{ p: { xs: 2.5, sm: 3.25 }, height: '100%', bgcolor: 'primary.light', borderColor: 'primary.light', borderLeft: '3px solid', borderLeftColor: 'primary.main' }}>
       <Stack direction="row" justifyContent="space-between" gap={2} alignItems="flex-start">
         <Box><Typography variant="pageEyebrow" color="primary.main">AI Advisor</Typography><Typography id="ai-assessment-title" component="h2" variant="sectionTitle" sx={{ mt: 0.5 }}>AI Assessment</Typography></Box>
         <Chip label="Not generated" size="small" variant="outlined" />
@@ -102,7 +101,7 @@ export interface OperationalItem {
 
 export function OperationalItemCard({ item }: { item: OperationalItem }) {
   return (
-    <Surface component="article" aria-label={item.title} sx={{ p: 2, height: '100%', '&:hover': { borderColor: 'border.strong' } }}>
+    <Surface component="article" aria-label={item.title} sx={{ p: { xs: 2.25, sm: 2.5 }, height: '100%', transition: 'border-color 120ms ease', '&:hover': { borderColor: 'border.strong' } }}>
       <Stack direction="row" justifyContent="space-between" gap={1.5} alignItems="flex-start">
         <Typography component="h3" variant="cardTitle" sx={{ overflowWrap: 'anywhere' }}>{item.title}</Typography>
         {item.badge ?? <Chip label={item.status.replaceAll('_', ' ')} size="small" variant="outlined" sx={{ textTransform: 'capitalize', flexShrink: 0 }} />}
@@ -114,7 +113,7 @@ export function OperationalItemCard({ item }: { item: OperationalItem }) {
 
 export function OperationalSection({ title, description, items, emptyMessage }: { title: string; description: string; items: OperationalItem[]; emptyMessage: string }) {
   return (
-    <Stack component="section" spacing={2} aria-label={title}>
+    <Stack component="section" spacing={2.25} aria-label={title}>
       <SectionHeader title={title} description={description} action={<Chip label={`${items.length} ${items.length === 1 ? 'record' : 'records'}`} size="small" variant="outlined" aria-label={`${title}: ${items.length} records`} />} />
       {items.length ? (
         <Grid2 container spacing={1.5}>

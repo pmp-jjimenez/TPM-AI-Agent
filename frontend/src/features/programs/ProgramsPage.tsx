@@ -72,11 +72,11 @@ export function ProgramsPage() {
 
   return (
     <PageContainer>
-      <Stack spacing={{ xs: 4, md: 5 }}>
+      <Stack spacing={{ xs: 4.5, md: 6 }}>
         <header>
           <Typography variant="pageEyebrow" color="text.muted">{greeting()}</Typography>
-          <Typography component="h1" variant="pageTitle" sx={{ mt: 0.5 }}>TPM Command Center</Typography>
-          <Typography variant="pageSubtitle" color="text.secondary" sx={{ mt: 0.75 }}>Manage complex enterprise programs with confidence.</Typography>
+          <Typography component="h1" variant="pageTitle" sx={{ mt: 0.75 }}>TPM Command Center</Typography>
+          <Typography variant="pageSubtitle" color="text.secondary" sx={{ mt: 1 }}>Manage complex enterprise programs with confidence.</Typography>
         </header>
 
         {presentation ? (
@@ -86,12 +86,12 @@ export function ProgramsPage() {
         ) : (
           <>
             <DashboardSection title="Portfolio Summary">
-              <Grid2 container spacing={1.5}>
+              <Grid2 container spacing={2}>
                 {metrics.map((metric) => <Grid2 key={metric.label} size={{ xs: 12, sm: 6, lg: 3 }}><SummaryCard {...metric} /></Grid2>)}
               </Grid2>
             </DashboardSection>
 
-            <Grid2 container spacing={2}>
+            <Grid2 container spacing={2.5}>
               <Grid2 size={{ xs: 12, lg: 7 }}><FocusCard /></Grid2>
               <Grid2 size={{ xs: 12, lg: 5 }}><AIAdvisorCard /></Grid2>
             </Grid2>
@@ -100,7 +100,7 @@ export function ProgramsPage() {
               {programs.length === 0 ? (
                 <EmptyState title="No programs available" description="No valid program records are currently available." />
               ) : (
-                <Grid2 container spacing={2}>
+                <Grid2 container spacing={2.5}>
                   {programs.slice(0, 3).map((program) => <Grid2 key={program.program_id} size={{ xs: 12, md: 6, xl: 4 }}><ProgramPreviewCard program={program} /></Grid2>)}
                 </Grid2>
               )}

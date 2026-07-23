@@ -2,7 +2,7 @@ import { Box, Divider, Paper, Stack, Typography, type PaperProps } from '@mui/ma
 import type { ReactNode } from 'react';
 
 export function Surface({ children, sx, ...props }: PaperProps) {
-  return <Paper variant="outlined" {...props} sx={{ borderRadius: 1.5, ...sx }}>{children}</Paper>;
+  return <Paper variant="outlined" {...props} sx={{ borderRadius: 1.5, boxShadow: '0 1px 2px rgba(23, 37, 43, 0.03)', ...sx }}>{children}</Paper>;
 }
 
 export function SectionHeader({ title, description, action }: { title: string; description?: string; action?: ReactNode }) {
@@ -15,7 +15,7 @@ export function SectionHeader({ title, description, action }: { title: string; d
 }
 
 export function MetricDisplay({ value, label, icon }: { value: string | number; label: string; icon?: ReactNode }) {
-  return <Stack direction="row" justifyContent="space-between" spacing={2}><Box><Typography variant="metricValue">{value}</Typography><Typography variant="metricLabel" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>{label}</Typography></Box>{icon}</Stack>;
+  return <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}><Box><Typography variant="metricValue">{value}</Typography><Typography variant="metricLabel" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>{label}</Typography></Box>{icon}</Stack>;
 }
 
 export interface MetadataItem { label: string; value?: ReactNode }

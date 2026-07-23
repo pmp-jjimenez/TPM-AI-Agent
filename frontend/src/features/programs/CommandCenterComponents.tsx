@@ -12,7 +12,7 @@ import { usableText } from './programTypes';
 export function DashboardSection({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
   return (
     <Box component="section">
-      <Box sx={{ mb: 1.5 }}><SectionHeader title={title} action={action} /></Box>
+      <Box sx={{ mb: { xs: 2, md: 2.25 } }}><SectionHeader title={title} action={action} /></Box>
       {children}
     </Box>
   );
@@ -20,9 +20,9 @@ export function DashboardSection({ title, action, children }: { title: string; a
 
 export function SummaryCard({ icon, metric, label }: { icon: ReactNode; metric: string | number; label: string }) {
   return (
-    <Card component="article" aria-label={`${label}: ${metric}`} variant="outlined" sx={{ height: '100%', transition: 'border-color 120ms ease', '&:hover': { borderColor: 'border.strong' } }}>
-      <CardContent sx={{ p: 2.25, '&:last-child': { pb: 2.25 } }}>
-        <MetricDisplay value={metric} label={label} icon={<Box sx={{ display: 'grid', placeItems: 'center', width: 36, height: 36, borderRadius: 1.25, bgcolor: 'primary.light', color: 'primary.main', flexShrink: 0 }}>{icon}</Box>} />
+    <Card component="article" aria-label={`${label}: ${metric}`} variant="outlined" sx={{ height: '100%', boxShadow: '0 1px 2px rgba(23, 37, 43, 0.03)', transition: 'border-color 120ms ease, box-shadow 120ms ease', '&:hover': { borderColor: 'border.strong', boxShadow: 1 } }}>
+      <CardContent sx={{ p: { xs: 2.25, md: 2.5 }, '&:last-child': { pb: { xs: 2.25, md: 2.5 } } }}>
+        <MetricDisplay value={metric} label={label} icon={<Box sx={{ display: 'grid', placeItems: 'center', width: 32, height: 32, borderRadius: 1, bgcolor: 'surface.sunken', color: 'text.muted', flexShrink: 0, '& .MuiSvgIcon-root': { fontSize: 18 } }}>{icon}</Box>} />
       </CardContent>
     </Card>
   );
@@ -37,16 +37,16 @@ const focusItems = [
 
 export function FocusCard() {
   return (
-    <Card variant="outlined" sx={{ height: '100%' }}>
-      <CardContent sx={{ p: { xs: 2.5, md: 3 }, '&:last-child': { pb: { xs: 2.5, md: 3 } } }}>
-        <Typography component="h2" variant="h2">Today&apos;s Focus</Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 2 }}>Priority signals for TPM review.</Typography>
+    <Card variant="outlined" sx={{ height: '100%', boxShadow: '0 1px 2px rgba(23, 37, 43, 0.03)' }}>
+      <CardContent sx={{ p: { xs: 2.5, md: 3.25 }, '&:last-child': { pb: { xs: 2.5, md: 3.25 } } }}>
+        <Typography component="h2" variant="sectionTitle">Today&apos;s Focus</Typography>
+        <Typography variant="supporting" color="text.secondary" sx={{ display: 'block', mt: 0.5, mb: 2.25 }}>Priority signals for TPM review.</Typography>
         <Stack divider={<Divider flexItem />}>
           {focusItems.map((item) => (
-            <Stack key={item.title} direction="row" spacing={1.5} sx={{ py: 1.5 }}>
-              <CheckCircleOutlineRoundedIcon sx={{ mt: 0.2, fontSize: 19, color: 'text.secondary' }} />
+            <Stack key={item.title} direction="row" spacing={1.5} sx={{ py: 1.625 }}>
+              <CheckCircleOutlineRoundedIcon sx={{ mt: 0.25, fontSize: 18, color: 'text.muted' }} />
               <Box>
-                <Typography fontWeight={650}>{item.title}</Typography>
+                <Typography variant="cardTitle">{item.title}</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>{item.detail}</Typography>
               </Box>
             </Stack>
@@ -59,16 +59,16 @@ export function FocusCard() {
 
 export function AIAdvisorCard() {
   return (
-    <Card variant="outlined" sx={{ height: '100%', bgcolor: 'background.subtle' }}>
-      <CardContent sx={{ p: { xs: 2.5, md: 3 }, '&:last-child': { pb: { xs: 2.5, md: 3 } }, height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Card variant="outlined" sx={{ height: '100%', bgcolor: 'primary.light', borderColor: 'primary.light', borderLeft: '3px solid', borderLeftColor: 'primary.main', boxShadow: '0 1px 2px rgba(23, 37, 43, 0.03)' }}>
+      <CardContent sx={{ p: { xs: 2.5, md: 3.25 }, '&:last-child': { pb: { xs: 2.5, md: 3.25 } }, height: '100%', display: 'flex', flexDirection: 'column' }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
           <Stack direction="row" alignItems="center" spacing={1}>
-            <AutoAwesomeOutlinedIcon color="primary" fontSize="small" />
-            <Typography component="h2" variant="h2">AI Advisor</Typography>
+            <Box sx={{ width: 30, height: 30, display: 'grid', placeItems: 'center', borderRadius: 1, bgcolor: 'background.paper', color: 'primary.main' }}><AutoAwesomeOutlinedIcon sx={{ fontSize: 17 }} /></Box>
+            <Typography component="h2" variant="sectionTitle">AI Advisor</Typography>
           </Stack>
           <ConfidenceBadge value="High" contextual />
         </Stack>
-        <Typography sx={{ mt: 3, fontSize: '1.05rem', lineHeight: 1.7, maxWidth: 560 }}>
+        <Typography sx={{ mt: 3.25, fontSize: '1rem', lineHeight: 1.75, maxWidth: 560 }}>
           No critical blockers detected. Review open dependencies before the next executive review.
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 'auto', pt: 3 }}>
@@ -81,21 +81,30 @@ export function AIAdvisorCard() {
 
 export function ProgramPreviewCard({ program }: { program: ProgramRecord }) {
   const name = usableText(program.program_name) ?? '—';
+  const updatedAt = usableText(program.metadata?.updated_at);
   return (
-    <Surface sx={{ height: '100%', display: 'flex', flexDirection: 'column', transition: 'border-color 120ms ease', '&:hover': { borderColor: 'border.strong' } }}>
-      <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 }, display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <Typography component="h3" variant="cardTitle" sx={{ overflowWrap: 'anywhere' }}>{name}</Typography>
-        <Stack direction="row" spacing={3} sx={{ mt: 2.25, mb: 2.5, flexWrap: 'wrap', rowGap: 1.5 }}>
-          <PhaseBadge value={usableText(program.phase)} />
-          <HealthStatusBadge value={usableText(program.health)} />
-          <ConfidenceBadge value={usableText(program.confidence)} />
+    <Surface component="article" sx={{ height: '100%', display: 'flex', flexDirection: 'column', transition: 'border-color 120ms ease, box-shadow 120ms ease', '&:hover': { borderColor: 'border.strong', boxShadow: 1 } }}>
+      <CardContent sx={{ p: { xs: 2.5, md: 3 }, '&:last-child': { pb: { xs: 2.5, md: 3 } }, display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <Box>
+          <Typography variant="overline" color="text.muted">Program</Typography>
+          <Typography component="h3" variant="sectionTitle" sx={{ mt: 0.5, overflowWrap: 'anywhere' }}>{name}</Typography>
+          <Typography variant="caption" color="text.muted" sx={{ display: 'block', mt: 0.5, overflowWrap: 'anywhere' }}>{program.program_id}</Typography>
+        </Box>
+        <Stack direction={{ xs: 'column', sm: 'row' }} gap={{ xs: 1.5, sm: 2 }} sx={{ mt: 2.5, mb: 2.5 }}>
+          <Box sx={{ flex: 1 }}><Typography variant="metadata" color="text.muted" sx={{ display: 'block', mb: 0.75 }}>Current Phase</Typography><PhaseBadge value={usableText(program.phase)} /></Box>
+          <Box sx={{ flex: 1 }}><Typography variant="metadata" color="text.muted" sx={{ display: 'block', mb: 0.75 }}>Health</Typography><HealthStatusBadge value={usableText(program.health)} /></Box>
+          <Box sx={{ flex: 1 }}><Typography variant="metadata" color="text.muted" sx={{ display: 'block', mb: 0.75 }}>Confidence</Typography><ConfidenceBadge value={usableText(program.confidence)} /></Box>
         </Stack>
+        <Box sx={{ pt: 2, borderTop: 1, borderColor: 'divider' }}>
+          <Typography variant="metadata" color="text.muted">Last Updated</Typography>
+          <Typography variant="body2" sx={{ mt: 0.375 }}>{updatedAt ?? 'Not available'}</Typography>
+        </Box>
         <Button
           component={RouterLink}
           to={`/programs/${encodeURIComponent(program.program_id)}`}
           size="small"
           endIcon={<ArrowForwardRoundedIcon />}
-          sx={{ alignSelf: 'flex-start', mt: 'auto', px: 0 }}
+          sx={{ alignSelf: 'flex-start', mt: 2.5, px: 0 }}
           aria-label={`Open Program ${name}`}
         >
           Open Program

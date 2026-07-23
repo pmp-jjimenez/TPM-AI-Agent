@@ -46,8 +46,8 @@ const systemItems: NavigationItem[] = [
 
 function NavigationGroup({ label, items, onNavigate }: { label: string; items: NavigationItem[]; onNavigate: () => void }) {
   return (
-    <Box sx={{ px: 1.5, py: 1.25 }}>
-      <Typography variant="overline" color="text.secondary" sx={{ display: 'block', px: 1.5, mb: 0.75 }}>
+    <Box sx={{ px: 1.5, py: 1.5 }}>
+      <Typography variant="overline" color="text.muted" sx={{ display: 'block', px: 1.5, mb: 1, letterSpacing: '0.11em' }}>
         {label}
       </Typography>
       <List disablePadding>
@@ -58,26 +58,28 @@ function NavigationGroup({ label, items, onNavigate }: { label: string; items: N
             to={item.path}
             onClick={onNavigate}
             sx={{
-              minHeight: 42,
+              minHeight: 40,
               borderRadius: 1.25,
-              mb: 0.25,
+              mb: 0.375,
               color: 'text.secondary',
+              px: 1.5,
               '&:hover': { bgcolor: 'surface.sunken', color: 'text.primary' },
               '&.active': { bgcolor: 'primary.light', color: 'primary.dark', boxShadow: 'inset 2px 0 0', boxShadowColor: 'primary.main' },
               '&.active .MuiListItemIcon-root': { color: 'primary.main' },
+              '& .MuiSvgIcon-root': { fontSize: 19 },
             }}
           >
-            <ListItemIcon sx={{ minWidth: 36, color: 'inherit' }}>{item.icon}</ListItemIcon>
-            <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: 600, fontSize: '0.875rem' }} />
+            <ListItemIcon sx={{ minWidth: 34, color: 'inherit', alignItems: 'center' }}>{item.icon}</ListItemIcon>
+            <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: 550, fontSize: '0.875rem' }} />
           </ListItemButton>
         ) : (
           <ListItemButton
             key={item.label}
             disabled
             aria-label={`${item.label} coming soon`}
-            sx={{ minHeight: 42, borderRadius: 1.25, mb: 0.25, '&.Mui-disabled': { opacity: 0.55 } }}
+            sx={{ minHeight: 40, borderRadius: 1.25, mb: 0.375, px: 1.5, '& .MuiSvgIcon-root': { fontSize: 19 } }}
           >
-            <ListItemIcon sx={{ minWidth: 36 }}>{item.icon}</ListItemIcon>
+            <ListItemIcon sx={{ minWidth: 34, alignItems: 'center' }}>{item.icon}</ListItemIcon>
             <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: 500, fontSize: '0.875rem' }} />
           </ListItemButton>
         ))}
@@ -89,19 +91,19 @@ function NavigationGroup({ label, items, onNavigate }: { label: string; items: N
 function SidebarContent({ onNavigate }: { onNavigate: () => void }) {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100%', bgcolor: 'background.subtle' }}>
-      <Box sx={{ height: { xs: 64, md: 72 }, px: 3, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-        <Box>
-          <Typography variant="cardTitle" color="text.primary">
+      <Box sx={{ minHeight: { xs: 72, md: 80 }, px: 3, py: 1.5, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="cardTitle" color="text.primary" sx={{ display: 'block', whiteSpace: 'nowrap' }}>
             TPM Operating System
           </Typography>
-          <Typography variant="metadata" color="text.muted">Program workspace</Typography>
+          <Typography variant="caption" color="text.muted" sx={{ display: 'block', mt: 0.5, whiteSpace: 'nowrap' }}>Enterprise Program Intelligence</Typography>
         </Box>
       </Box>
       <Divider />
-      <Box component="nav" aria-label="Primary navigation" sx={{ flexGrow: 1, py: 1.25 }}>
+      <Box component="nav" aria-label="Primary navigation" sx={{ flexGrow: 1, py: 1.5 }}>
         <NavigationGroup label="Workspace" items={workspaceItems} onNavigate={onNavigate} />
       </Box>
-      <Divider sx={{ mx: 2 }} />
+      <Divider sx={{ mx: 3 }} />
       <NavigationGroup label="System" items={systemItems} onNavigate={onNavigate} />
     </Box>
   );

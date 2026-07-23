@@ -22,7 +22,7 @@ export function AppShell() {
         }}
       >
         <Toolbar sx={{ minHeight: { xs: 64, md: 72 } }} />
-        <Box sx={{ pt: { xs: 2.5, md: 3.5, xl: 4 } }}>
+        <Box sx={{ pt: { xs: 3, md: 4, xl: 4.5 } }}>
           <Outlet />
         </Box>
       </Box>

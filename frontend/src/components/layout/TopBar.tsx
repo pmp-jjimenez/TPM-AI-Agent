@@ -1,9 +1,10 @@
 import AccountCircleOutlinedIcon from '@mui/icons-material/AccountCircleOutlined';
 import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
+import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
 import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
 import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
-import { AppBar, Box, Divider, IconButton, Stack, Toolbar, Tooltip, Typography } from '@mui/material';
+import { AppBar, Box, IconButton, Stack, Toolbar, Tooltip, Typography } from '@mui/material';
 import { useLocation } from 'react-router-dom';
 import { drawerWidth } from './Sidebar';
 
@@ -40,25 +41,25 @@ export function TopBar({ onMenuOpen }: TopBarProps) {
         zIndex: (theme) => theme.zIndex.drawer - 1,
       }}
     >
-      <Toolbar sx={{ minHeight: { xs: 64, md: 72 }, px: { xs: 2, sm: 3, lg: 4 } }}>
+      <Toolbar sx={{ minHeight: { xs: 64, md: 72 }, px: { xs: 2, sm: 3, lg: 4 }, gap: 1.5 }}>
         <IconButton aria-label="Open navigation" edge="start" onClick={onMenuOpen} sx={{ mr: 1.5, display: { md: 'none' } }}>
           <MenuRoundedIcon />
         </IconButton>
-        <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0 }}>
-          <Typography variant="metadata" sx={{ whiteSpace: 'nowrap' }}>
+        <Stack component="nav" aria-label="Breadcrumb" direction="row" alignItems="center" spacing={1} sx={{ minWidth: 0 }}>
+          <Typography variant="metadata" color="text.muted" sx={{ whiteSpace: 'nowrap' }}>
             TPM Operating System
           </Typography>
-          <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', sm: 'block' } }} />
+          <ChevronRightRoundedIcon aria-hidden sx={{ display: { xs: 'none', sm: 'block' }, color: 'text.muted', fontSize: 16 }} />
           <Typography component="div" variant="cardTitle" sx={{ display: { xs: 'none', sm: 'block' }, color: 'text.primary', whiteSpace: 'nowrap' }}>
             {pageTitle(location.pathname)}
           </Typography>
         </Stack>
         <Box sx={{ flexGrow: 1 }} />
-        <Stack direction="row" spacing={0.25} aria-label="Future workspace actions">
+        <Stack direction="row" spacing={0.5} alignItems="center" aria-label="Future workspace actions">
           {futureActions.map((action) => (
             <Tooltip key={action.label} title={`${action.label} — coming soon`}>
               <span>
-                <IconButton disabled aria-label={`${action.label} coming soon`} size="small" sx={{ display: action.label === 'AI Assistant' ? { xs: 'none', sm: 'inline-flex' } : 'inline-flex' }}>
+                <IconButton disabled aria-label={`${action.label} coming soon`} size="small" sx={{ width: 34, height: 34, display: action.label === 'AI Assistant' ? { xs: 'none', sm: 'inline-flex' } : 'inline-flex', '& .MuiSvgIcon-root': { fontSize: 20 } }}>
                   {action.icon}
                 </IconButton>
               </span>

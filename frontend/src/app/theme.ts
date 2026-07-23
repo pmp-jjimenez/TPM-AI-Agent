@@ -3,7 +3,7 @@ import { alpha, createTheme } from '@mui/material/styles';
 export const designTokens = {
   color: {
     brand: '#315f73', brandDark: '#244957', brandSubtle: '#edf4f6',
-    canvas: '#f5f7f8', surface: '#ffffff', surfaceSubtle: '#f8fafb', surfaceSunken: '#f1f4f5',
+    canvas: '#f6f8f9', surface: '#ffffff', surfaceSubtle: '#f9fafb', surfaceSunken: '#f1f4f5',
     text: '#17252b', textSecondary: '#52636b', textMuted: '#718188',
     border: '#dde4e7', borderStrong: '#c5d0d5',
     healthy: '#287a5b', healthySubtle: '#edf7f2', healthyBorder: '#b9decf',
@@ -14,7 +14,7 @@ export const designTokens = {
   },
   radius: { control: 7, card: 10, chip: 999 },
   border: { subtle: '1px solid #dde4e7', strong: '1px solid #c5d0d5' },
-  shadow: { raised: '0 1px 2px rgba(23, 37, 43, 0.06)', overlay: '0 12px 30px rgba(23, 37, 43, 0.12)' },
+  shadow: { raised: '0 1px 2px rgba(23, 37, 43, 0.05), 0 1px 8px rgba(23, 37, 43, 0.025)', overlay: '0 12px 30px rgba(23, 37, 43, 0.12)' },
 } as const;
 
 const tone = (main: string, subtle: string, border: string, contrastText = main) => ({ main, subtle, border, contrastText });
@@ -46,22 +46,22 @@ export const theme = createTheme({
   shape: { borderRadius: designTokens.radius.control },
   typography: {
     fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    h1: { fontSize: '1.625rem', lineHeight: 1.25, fontWeight: 700, letterSpacing: '-0.025em' },
-    h2: { fontSize: '1.125rem', lineHeight: 1.4, fontWeight: 675, letterSpacing: '-0.01em' },
-    h3: { fontSize: '1rem', lineHeight: 1.45, fontWeight: 650 },
+    h1: { fontSize: '1.75rem', lineHeight: 1.22, fontWeight: 680, letterSpacing: '-0.03em' },
+    h2: { fontSize: '1.125rem', lineHeight: 1.4, fontWeight: 640, letterSpacing: '-0.012em' },
+    h3: { fontSize: '1rem', lineHeight: 1.45, fontWeight: 620 },
     body1: { fontSize: '0.9375rem', lineHeight: 1.6 }, body2: { fontSize: '0.875rem', lineHeight: 1.55 },
     caption: { fontSize: '0.75rem', lineHeight: 1.5 },
     overline: { fontSize: '0.6875rem', lineHeight: 1.5, fontWeight: 700, letterSpacing: '0.08em' },
     button: { fontSize: '0.875rem', textTransform: 'none', fontWeight: 650, letterSpacing: 0 },
     pageEyebrow: { fontSize: '0.75rem', lineHeight: 1.5, fontWeight: 650, letterSpacing: '0.035em' },
-    pageTitle: { fontSize: '1.625rem', lineHeight: 1.25, fontWeight: 700, letterSpacing: '-0.025em' },
+    pageTitle: { fontSize: '1.75rem', lineHeight: 1.22, fontWeight: 680, letterSpacing: '-0.03em' },
     pageSubtitle: { fontSize: '0.9375rem', lineHeight: 1.65, fontWeight: 400 },
-    sectionTitle: { fontSize: '1.0625rem', lineHeight: 1.4, fontWeight: 675, letterSpacing: '-0.01em' },
-    cardTitle: { fontSize: '0.9375rem', lineHeight: 1.45, fontWeight: 650 },
-    metricValue: { fontSize: '1.5rem', lineHeight: 1.2, fontWeight: 725, letterSpacing: '-0.025em' },
+    sectionTitle: { fontSize: '1.0625rem', lineHeight: 1.4, fontWeight: 640, letterSpacing: '-0.012em' },
+    cardTitle: { fontSize: '0.9375rem', lineHeight: 1.45, fontWeight: 620 },
+    metricValue: { fontSize: '1.75rem', lineHeight: 1.15, fontWeight: 680, letterSpacing: '-0.035em' },
     metricLabel: { fontSize: '0.8125rem', lineHeight: 1.5, fontWeight: 500 },
     supporting: { fontSize: '0.8125rem', lineHeight: 1.55, fontWeight: 400 },
-    metadata: { fontSize: '0.75rem', lineHeight: 1.5, fontWeight: 600, letterSpacing: '0.01em' },
+    metadata: { fontSize: '0.75rem', lineHeight: 1.5, fontWeight: 550, letterSpacing: '0.01em' },
   },
   components: {
     MuiCssBaseline: { styleOverrides: { body: { minWidth: 320 }, '::selection': { backgroundColor: alpha(designTokens.color.brand, 0.18) } } },
@@ -75,7 +75,7 @@ export const theme = createTheme({
     MuiIconButton: { styleOverrides: { root: { borderRadius: designTokens.radius.control, '&:hover': { backgroundColor: designTokens.color.surfaceSunken } } } },
     MuiDrawer: { styleOverrides: { paper: { backgroundColor: designTokens.color.surfaceSubtle, borderColor: designTokens.color.border } } },
     MuiAppBar: { styleOverrides: { root: { backgroundColor: alpha(designTokens.color.surface, 0.96), color: designTokens.color.text } } },
-    MuiListItemButton: { styleOverrides: { root: { '&.Mui-selected': { backgroundColor: designTokens.color.brandSubtle }, '&.Mui-disabled': { opacity: 0.52 } } } },
+    MuiListItemButton: { styleOverrides: { root: { '&.Mui-selected': { backgroundColor: designTokens.color.brandSubtle }, '&.Mui-disabled': { opacity: 0.48 } } } },
     MuiSkeleton: { styleOverrides: { root: { backgroundColor: designTokens.color.surfaceSunken } } },
     MuiAlert: { styleOverrides: { root: { borderRadius: designTokens.radius.card }, standardError: { backgroundColor: designTokens.color.criticalSubtle } } },
   },

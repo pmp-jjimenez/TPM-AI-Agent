@@ -120,12 +120,12 @@ export function ProgramWorkspacePage() {
 
   return (
     <PageContainer>
-      <Stack spacing={{ xs: 4, md: 5 }}>
+      <Stack spacing={{ xs: 4.5, md: 6 }}>
         <MissionHeader name={usableText(program.program_name) ?? 'Program name unavailable'} description={usableText(program.description)} programId={program.program_id} phase={usableText(program.phase)} health={usableText(program.health)} confidence={usableText(program.confidence)} updatedAt={displayDate(program.metadata?.updated_at)} />
 
-        <Stack component="section" spacing={2} aria-label="Executive health summary">
+        <Stack component="section" spacing={2.25} aria-label="Executive health summary">
           <SectionHeader title="Executive Health Summary" description="The current reported state of this program." />
-          <Grid2 container spacing={1.5} data-testid="program-health-grid">
+          <Grid2 container spacing={2} data-testid="program-health-grid">
             <Grid2 size={{ xs: 12, sm: 6, lg: 3 }}><ExecutiveMetricCard label="Program Health" value={usableText(program.health) ?? '—'} supportingText="Reported health" /></Grid2>
             <Grid2 size={{ xs: 12, sm: 6, lg: 3 }}><ExecutiveMetricCard label="Confidence" value={usableText(program.confidence) ?? '—'} supportingText="Reported confidence" /></Grid2>
             <Grid2 size={{ xs: 12, sm: 6, lg: 3 }}><ExecutiveMetricCard label="Lifecycle Phase" value={usableText(program.phase) ?? '—'} supportingText="Current program phase" /></Grid2>
@@ -133,12 +133,12 @@ export function ProgramWorkspacePage() {
           </Grid2>
         </Stack>
 
-        <Grid2 container spacing={2} alignItems="stretch">
+        <Grid2 container spacing={2.5} alignItems="stretch">
           <Grid2 size={{ xs: 12, md: 5 }}><PriorityCard items={priorities(program)} /></Grid2>
           <Grid2 size={{ xs: 12, md: 7 }}><AIAssessmentCard /></Grid2>
         </Grid2>
 
-        <Stack spacing={{ xs: 4, md: 5 }} component="section" aria-labelledby="operational-workspace-title">
+        <Stack spacing={{ xs: 4.5, md: 6 }} component="section" aria-labelledby="operational-workspace-title">
           <BoxTitle />
           <OperationalSection title="Risks" description="Threats to delivery outcomes and their current treatment." items={risks} emptyMessage="No canonical risks are stored for this program." />
           <OperationalSection title="Issues" description="Active delivery problems requiring resolution." items={issues} emptyMessage="No canonical issues are stored for this program." />
