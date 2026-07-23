@@ -2,6 +2,18 @@
 
 This release history is based on the actual Git history available in the repository. Some commits do not carry explicit sprint numbers. Where exact sprint mapping is uncertain, that uncertainty is stated rather than inferred.
 
+## Home Command Center — UX-1.2
+
+Transformed the existing Programs landing experience into a decision-oriented TPM
+Command Center within the application shell. The page now presents a time-aware welcome,
+portfolio summary metrics derived from existing Program data, structured focus and AI
+advisor previews, and a bounded active-program card preview with direct workspace links.
+
+The responsive Material UI composition uses reusable summary, section, focus, advisor,
+and program-preview components. Major Incidents and advisor guidance remain explicitly
+non-live placeholders. Routes, API behavior, backend logic, persistence, intelligence,
+and domain entities are unchanged.
+
 ## Decision Record Foundation v1 — US-58.1
 
 Adopted stored Program decisions as canonical `DecisionRecord` entities using the

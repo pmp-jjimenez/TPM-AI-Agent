@@ -124,7 +124,14 @@ describe('Programs page', () => {
     mockFetchOnce([{ program_id: '', program_name: 'Invalid' }, { ...alpha, program_id: 'zulu', program_name: 'Zulu' }, missing, alpha]);
     renderApp('/programs');
 
-    const headings = await screen.findAllByRole('heading', { level: 2 });
+    expect(await screen.findByRole('heading', { level: 1, name: 'TPM Command Center' })).toBeInTheDocument();
+    expect(screen.getByText(/Good Morning|Good Afternoon/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Portfolio Summary' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: "Today's Focus" })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'AI Advisor' })).toBeInTheDocument();
+    expect(screen.getByText('Confidence: HIGH')).toBeInTheDocument();
+    expect(screen.getByRole('article', { name: 'Active Programs: 3' })).toBeInTheDocument();
+    const headings = screen.getAllByRole('heading', { level: 3 });
     expect(headings.map((heading) => heading.textContent)).toEqual(['—', 'Alpha Program', 'Zulu']);
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(3);
     expect(screen.queryByText('Invalid')).not.toBeInTheDocument();
