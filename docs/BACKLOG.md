@@ -5,7 +5,7 @@ This backlog distinguishes completed work, in-progress documentation work, plann
 | Epic ID | Epic Name | Objective | Tickets or Capabilities | Current Status | Priority |
 |---|---|---|---|---|---|
 | v0.7.0 | Foundation & Experience | Establish the first demonstrable TPM Operating System product release. | Canonical program domain; read-only API; Application Shell; Home Command Center; Programs experience; Program Mission Control; Product Design System; responsive and accessibility foundations; product identity. | Complete | High |
-| DX-1.0 | Developer Console | Establish the next engineering increment and improve the local developer operating experience before v0.8 intelligence expansion. | Developer-console scope to be defined and delivered without claiming v0.8 product intelligence early. | Next | High |
+| DX-1.0 | Developer Console | Establish the next engineering increment and improve the local developer operating experience before v0.8 intelligence expansion. | One interactive and command-line entry point; environment validation; safe backend/frontend lifecycle; status; tests; build; release check; existing CLI launch; local logs and PID metadata. | Completed | High |
 | Epic 40 | Program Workspace Issue Management | Improve active program execution by tracking issues with ownership and closure. | Add issues to workspace; capture owner; capture due date; validate due date format; list open issues; close issues; improve return-to-workspace feedback. | Completed | High |
 | Epic 41 | Engineering Documentation Foundation | Establish core engineering and product documentation for maintainability and planning. | Product vision; roadmap; backlog; architecture; release history. | Completed | High |
 | Epic 42 | AI Expert Council Foundation | Document specialized expert personas and define how a future council should support TPM judgment. | Create cloud architect, incident commander, executive advisor, delivery manager, operations manager, change manager, security advisor, and customer success advisor personas; document council purpose, invocation, conflict handling, and current implementation boundary. | Completed | High |
@@ -37,8 +37,8 @@ This backlog distinguishes completed work, in-progress documentation work, plann
 
 - v0.7.0 Foundation & Experience is complete. Its canonical release record is
   [docs/releases/v0.7.0-foundation-and-experience.md](releases/v0.7.0-foundation-and-experience.md).
-- v0.8 Intelligence is the next product version; DX-1.0 Developer Console is the
-  next engineering sprint.
+- v0.8 Intelligence is the next product version; DX-1.0 Developer Console is its
+  completed first engineering increment.
 - Epic 40 is marked completed based on Git history and current workspace behavior.
 - Epic 41 and Epic 42 are documentation foundation epics completed by this controlled change set.
 - Sprint 51 implements routing only. It does not invoke personas, run multiple AI calls, or change CLI behavior.

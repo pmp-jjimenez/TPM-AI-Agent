@@ -1,0 +1,135 @@
+#!/usr/bin/env bash
+
+set -u
+
+TPM_DEV_ENTRY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TPM_DEV_ROOT="${TPM_DEV_ROOT_OVERRIDE:-$TPM_DEV_ENTRY_DIR}"
+TPM_DEV_IMPLEMENTATION_DIR="$TPM_DEV_ENTRY_DIR/scripts/dev"
+
+for module in common environment processes quality; do
+    module_path="$TPM_DEV_IMPLEMENTATION_DIR/$module.sh"
+    if [ ! -r "$module_path" ]; then
+        printf 'Developer Console error: required file is missing: %s\n' "$module_path" >&2
+        exit 1
+    fi
+    # shellcheck source=/dev/null
+    . "$module_path"
+done
+
+show_help() {
+    cat <<'EOF'
+TPM Operating System Developer Console
+
+Usage:
+  ./tpm-dev [command]
+
+Commands:
+  start          Start the local backend and frontend.
+  stop           Stop only services safely recorded by this console.
+  status         Show service, URL, log, branch, and working-tree status.
+  test           Run backend and frontend tests.
+  build          Build the production frontend.
+  release-check  Run the complete local release validation.
+  cli            Launch the existing TPM Operating System CLI.
+  help           Show this help.
+
+Run ./tpm-dev without a command to open the interactive menu.
+EOF
+}
+
+launch_cli() {
+    if ! validate_repository; then
+        return 1
+    fi
+    if ! require_python; then
+        return 1
+    fi
+    if [ ! -f "$TPM_DEV_ROOT/app/main.py" ]; then
+        error "The supported CLI entry point app/main.py is missing. Restore the repository before launching the CLI."
+        return 1
+    fi
+
+    cd "$TPM_DEV_ROOT" || return 1
+    "$TPM_DEV_ROOT/.venv/bin/python" app/main.py
+}
+
+dispatch_command() {
+    command_name="$1"
+    case "$command_name" in
+        start) start_development ;;
+        stop) stop_development ;;
+        status) show_status ;;
+        test) run_tests ;;
+        build) build_frontend ;;
+        release-check) run_release_check ;;
+        cli) launch_cli ;;
+        help|-h|--help) show_help ;;
+        *)
+            error "Unknown command: $command_name"
+            printf 'Run ./tpm-dev help to see the available commands.\n' >&2
+            return 2
+            ;;
+    esac
+}
+
+show_menu() {
+    while true; do
+        print_menu_header
+        printf '\n'
+        print_environment_summary
+        cat <<'EOF'
+
+1) Start Development
+2) Stop Development
+3) Show Status
+4) Run Tests
+5) Build Frontend
+6) Release Check
+7) Launch Existing CLI
+8) Help
+9) Exit
+
+EOF
+        printf 'Select: '
+        if ! IFS= read -r selection; then
+            printf '\n'
+            return 0
+        fi
+
+        case "$selection" in
+            1) dispatch_command start ;;
+            2) dispatch_command stop ;;
+            3) dispatch_command status ;;
+            4) dispatch_command test ;;
+            5) dispatch_command build ;;
+            6) dispatch_command release-check ;;
+            7) dispatch_command cli ;;
+            8) dispatch_command help ;;
+            9) return 0 ;;
+            *) error "Choose a number from 1 through 9." ;;
+        esac
+        action_status=$?
+        printf '\n'
+        if [ -t 0 ]; then
+            printf 'Press Return to continue...'
+            IFS= read -r _continue
+        fi
+        if [ "$action_status" -ne 0 ]; then
+            printf 'The action did not complete successfully (exit %s).\n' "$action_status" >&2
+        fi
+    done
+}
+
+if [ "$#" -gt 1 ]; then
+    error "Only one command may be provided."
+    show_help >&2
+    exit 2
+fi
+
+if [ "$#" -eq 0 ]; then
+    show_menu
+    exit $?
+fi
+
+dispatch_command "$1"
+exit $?

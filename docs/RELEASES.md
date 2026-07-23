@@ -2,6 +2,18 @@
 
 This release history is based on the actual Git history available in the repository. Some commits do not carry explicit sprint numbers. Where exact sprint mapping is uncertain, that uncertainty is stated rather than inferred.
 
+## DX-1.0 — Developer Console
+
+Implemented the first engineering increment after v0.7.0 as a local, modular Bash
+Developer Console. The root `tpm-dev` entry point provides interactive and
+non-interactive start, stop, status, test, build, release-check, existing-CLI, and
+help workflows. Repository-local PID and log handling verifies recorded process
+identity and port ownership, removes stale metadata, avoids broad process-kill
+commands, and never stops unrelated services automatically.
+
+The console adds no third-party dependency, does not modify local environment files,
+and does not commit, tag, push, deploy, or open a browser.
+
 ## v0.7.0 — Foundation & Experience
 
 Status: Complete.

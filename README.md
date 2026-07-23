@@ -24,6 +24,36 @@ python3 -m pip install -r requirements.txt
 
 Gemini-backed workflows require a `GEMINI_API_KEY`. Local program-management workflows remain filesystem based. See [QUICKSTART.md](QUICKSTART.md) and [docs/DEVELOPER_SETUP.md](docs/DEVELOPER_SETUP.md) for current setup and usage details.
 
+## Developer Console
+
+The local Developer Console is the single entry point for starting, stopping,
+inspecting, testing, and building the development environment. It uses
+`.venv/bin/python` directly; manual virtual-environment activation is not required.
+
+```bash
+./tpm-dev
+./tpm-dev start
+./tpm-dev stop
+./tpm-dev status
+./tpm-dev test
+./tpm-dev build
+./tpm-dev release-check
+./tpm-dev cli
+./tpm-dev help
+```
+
+Before starting, create the ignored local file `frontend/.env.local` with:
+
+```dotenv
+VITE_API_BASE_URL=http://127.0.0.1:8000
+```
+
+The backend is served at `http://127.0.0.1:8000` and the frontend at
+`http://localhost:5173`. PID metadata and logs are stored under `.tpm-dev/`.
+If a service exits unexpectedly, run `./tpm-dev status`; it reports and safely
+removes stale PID metadata. The console validates recorded process commands and
+ports before stopping them and never kills an unrelated process automatically.
+
 ## Repository Boundaries
 
 The long-term repository boundary is:
@@ -52,4 +82,8 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for current and target architec
 
 ## Repository Status
 
-v0.7.0 is complete. The next product version is **v0.8 Intelligence**, and the next engineering sprint is **DX-1.0 Developer Console**. See the [roadmap](docs/ROADMAP.md) for direction and the [canonical release document](docs/releases/v0.7.0-foundation-and-experience.md) for delivered scope and limitations.
+v0.7.0 is complete, and **DX-1.0 Developer Console** is implemented as the first
+engineering increment toward **v0.8 Intelligence**. See the
+[roadmap](docs/ROADMAP.md) for direction and the
+[canonical release document](docs/releases/v0.7.0-foundation-and-experience.md)
+for v0.7.0 scope and limitations.
