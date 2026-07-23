@@ -17,12 +17,19 @@ for the delivered scope and complete limitations.
 
 ## Next
 
-- **Next product version:** v0.8 Intelligence.
-- **Next engineering sprint:** DX-1.0 Developer Console.
+- **Next product version:** v0.8.0 Executive Artifacts.
+- **Current engineering epic:** ART-1.0 Executive Artifact Foundation.
 
-v0.8 will build grounded, explainable intelligence capabilities on the v0.7 domain
-and experience foundation. DX-1.0 will first strengthen the local developer
-operating experience and provide a dependable console for inspecting the system.
+v0.8.0 will establish production-quality executive artifact generation on the v0.7
+domain and experience foundation. ART-1.0 is intentionally incremental. Its first
+increment adds the isolated ReportLab dependency boundary, versioned Inter font
+assets, renderer-neutral result contracts, backend readiness diagnostics, and
+architecture evidence. It does not yet generate the Executive Status Report PDF.
+
+The v0.8.0 production deliverable remains one Executive Status Report PDF alongside
+the preserved Markdown report. PowerPoint, HTML, Project Charter, Operational
+Readiness, Major Incident, Steering Committee, and other artifact implementations
+remain outside ART-1.0.
 
 ## Version 0.1
 

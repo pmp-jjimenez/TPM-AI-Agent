@@ -19,6 +19,8 @@ REQUIRED_DIRECTORIES = [
     "tests",
 ]
 CORE_MODULES = [
+    "artifact_renderer",
+    "font_assets",
     "memory",
     "prompt_builder",
     "context_loader",
@@ -129,6 +131,34 @@ def check_programs_directory(doctor):
         doctor.fail("data/programs/ exists but is not writable.")
 
 
+def check_pdf_backend(doctor):
+    try:
+        from pdf_reportlab_renderer import EXPECTED_REPORTLAB_VERSION, inspect_pdf_backend
+
+        readiness = inspect_pdf_backend()
+    except Exception:
+        doctor.fail("PDF backend readiness could not be inspected safely.")
+        return
+
+    if not readiness.reportlab_available:
+        doctor.fail(
+            f"ReportLab is not installed; install repository dependencies "
+            f"(expected {EXPECTED_REPORTLAB_VERSION})."
+        )
+    elif readiness.installed_version != EXPECTED_REPORTLAB_VERSION:
+        doctor.fail(
+            f"ReportLab version is {readiness.installed_version or 'unknown'}; "
+            f"expected {EXPECTED_REPORTLAB_VERSION}."
+        )
+    else:
+        doctor.pass_(f"ReportLab version is {EXPECTED_REPORTLAB_VERSION}.")
+
+    if readiness.font_assets_valid:
+        doctor.pass_("Bundled Inter 4.1 font assets passed checksum validation.")
+    else:
+        doctor.fail("Bundled Inter 4.1 font assets are missing or invalid.")
+
+
 def check_runtime_directory(doctor, relative_path):
     path = REPO_ROOT / relative_path
     if path.is_dir():
@@ -165,6 +195,7 @@ def main():
     check_repo_root(doctor)
     check_required_directories(doctor)
     check_imports(doctor)
+    check_pdf_backend(doctor)
     check_programs_directory(doctor)
     check_runtime_directory(doctor, "reports")
     check_runtime_directory(doctor, "sessions")

@@ -10,8 +10,8 @@ persistence, CLI workflows, a read-only FastAPI boundary, and a React enterprise
 application with Command Center and Program Mission Control experiences.
 
 See the canonical [v0.7.0 release document](releases/v0.7.0-foundation-and-experience.md)
-for product scope and limitations. The next product version is **v0.8
-Intelligence**, and the next engineering sprint is **DX-1.0 Developer Console**.
+for product scope and limitations. The planned next product version is **v0.8.0
+Executive Artifacts**. **ART-1.0 Executive Artifact Foundation** is in progress.
 
 ## Product Architecture
 
@@ -96,6 +96,30 @@ FastAPI publishes Swagger UI at `/docs` and OpenAPI JSON at `/openapi.json`. The
 
 The reporting engine owns transformation of validated program state into audience-specific artifacts. The current implementation is `app/executive.py`, which generates Markdown executive status reports. Future work may add PDF, presentation, scheduled, or template-driven output behind a stable backend interface while preserving deterministic inputs and auditable generated artifacts.
 
+ART-1.0 Increment 1 establishes only the dependency and isolation foundation for the
+future Executive Status Report PDF:
+
+- `app/artifact_renderer.py` defines the renderer-neutral PDF format declaration,
+  render context, in-memory result, generic renderer protocol, and bounded errors. It
+  defines no Program, report view-model, semantic component, page, slide, HTML, CSS,
+  or filesystem-output behavior.
+- `app/font_assets.py` owns immutable Inter 4.1 Regular and SemiBold asset metadata,
+  deterministic application-relative paths, approved checksums, and bounded
+  validation. It does not import or register ReportLab.
+- `app/pdf_reportlab_renderer.py` is the only current production module allowed to
+  reference ReportLab. It checks the exact 5.0.0 dependency, verifies font readiness,
+  and temporarily scopes and serializes access to ReportLab's process-global language
+  and invariant settings. It does not yet implement a renderer or generate a PDF.
+- `app/assets/fonts/inter/` contains only the approved static TTF files, OFL license,
+  and immutable source/checksum record. Runtime font discovery never uses system,
+  package-manager, CDN, or mutable external paths.
+
+Existing Program domain, persistence, CLI, API, Gemini behavior, and Markdown report
+generation remain unchanged. No PDF report layout, semantic artifact contract, CLI
+PDF action, PowerPoint renderer, or HTML renderer exists in this increment. The
+backend decision is recorded in
+[ADR 0001](adr/0001-use-reportlab-as-isolated-art-1.0-pdf-backend.md).
+
 ### AI Engine
 
 The AI engine owns model-provider interaction and prompt execution boundaries. Today `app/llm.py`, `app/context_loader.py`, `app/prompt_builder.py`, and the relevant orchestration modules implement this capability using existing Markdown instructions and optional Gemini calls. Prompts and AI behavior remain unchanged in this sprint. Future provider abstraction, evaluation, observability, and safety controls should be added around—not silently alter—the established prompt contracts.
@@ -137,6 +161,9 @@ The current product is a local CLI application backed by Markdown knowledge asse
 | `app/memory.py` | Creates, loads, saves, and lists JSON program records under `data/programs/`. |
 | `app/workspace.py` | Provides Active Program Workspace actions for risks, issues, decisions, next actions, health updates, and executive report generation. |
 | `app/executive.py` | Generates Markdown Executive Status Reports under `reports/executive/`. |
+| `app/artifact_renderer.py` | Defines the renderer-neutral, in-memory artifact renderer foundation; only PDF is currently declared. |
+| `app/font_assets.py` | Resolves and validates the approved bundled Inter 4.1 static font assets without importing a renderer. |
+| `app/pdf_reportlab_renderer.py` | Inspects the isolated ReportLab 5.0.0 backend and safely scopes its process-global configuration; no PDF renderer exists yet. |
 | `app/context_loader.py` | Loads selected Markdown context files for New Program prompt construction. |
 | `app/prompt_builder.py` | Builds the structured New Program prompt sent to the AI model. |
 | `app/pdf_extractor.py` | Validates local PDF paths and extracts bounded selectable text with metadata; it does not perform OCR. |
@@ -399,7 +426,8 @@ charts, new routes, or a full information-architecture redesign.
 - Major Incident, Executive Review, and Operational Readiness are menu placeholders only.
 - Persona routing is integrated at the CLI and New Program prompt boundary, but there is no AI Expert Council orchestration.
 - Executive stakeholders such as sponsors, CIOs, CTOs, VPs, steering committees, finance, legal, and PMO leadership remain a future governance or stakeholder layer and are not implemented as a Stakeholder Council.
-- Executive report generation is Markdown-only and relatively simple.
+- Executive report generation remains Markdown-only. ART-1.0 Increment 1 adds PDF
+  dependency, font, and isolation foundations but no PDF generation workflow.
 - Gemini model availability and behavior depend on external API access and a configured `GEMINI_API_KEY`.
 - Persona routing is transient execution context only; there is no program schema change and routing is not persisted to program JSON.
 
@@ -412,7 +440,8 @@ Future architecture may include:
 - A document ingestion service for SOWs and related program artifacts.
 - Deeper persona routing integration with future completed workflows.
 - An expert orchestration layer that uses deterministic persona routing to produce TPM-synthesized council reviews.
-- A report generation layer for professional PowerPoint, PDF, and executive packages.
+- Completion of the ART-1.0 Executive Status Report PDF through later bounded
+  increments. Other artifact formats require separate approval.
 - Docker packaging for consistent local and hosted runtime behavior.
 - Dependency management through `uv`.
 - A durable database if the product moves beyond local single-user operation.

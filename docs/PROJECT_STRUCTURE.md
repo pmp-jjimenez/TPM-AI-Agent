@@ -39,16 +39,26 @@ This document describes the repository as it exists today.
 │   └── schemas/
 │       └── README.md
 ├── app/
+│   ├── artifact_renderer.py
+│   ├── assets/
+│   │   └── fonts/
+│   │       └── inter/
+│   │           ├── Inter-Regular.ttf
+│   │           ├── Inter-SemiBold.ttf
+│   │           ├── OFL.txt
+│   │           └── SOURCE.md
 │   ├── context_loader.py
 │   ├── application_version.py
 │   ├── engine.py
 │   ├── executive.py
+│   ├── font_assets.py
 │   ├── intelligence.py
 │   ├── intelligence_analysis.py
 │   ├── llm.py
 │   ├── main.py
 │   ├── memory.py
 │   ├── prompt_builder.py
+│   ├── pdf_reportlab_renderer.py
 │   ├── router.py
 │   ├── test_gemini.py
 │   └── workspace.py
@@ -56,6 +66,8 @@ This document describes the repository as it exists today.
 │   └── programs/
 │       └── microsoft-teams-latam.json
 ├── docs/
+│   ├── adr/
+│   │   └── 0001-use-reportlab-as-isolated-art-1.0-pdf-backend.md
 │   ├── AI_EXPERT_COUNCIL.md
 │   ├── ARCHITECTURE.md
 │   ├── BACKLOG.md

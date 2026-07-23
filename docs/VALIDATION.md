@@ -14,6 +14,10 @@ The test suite uses Python's built-in `unittest` library. It does not require `G
 
 Current automated coverage validates:
 
+- Exact ReportLab dependency declaration and isolation from renderer-neutral modules.
+- Versioned Inter 4.1 asset presence, license, supported weights, and checksums.
+- ReportLab backend readiness, bounded missing/version/font failures, and temporary
+  global-configuration restoration.
 - Program memory create, save, and reload behavior in a temporary directory.
 - Prompt builder inclusion of project description, TPM context, and expected assessment sections.
 - Executive report generation in a temporary reports directory.
@@ -26,7 +30,8 @@ The automated tests do not validate:
 - Real program records under `data/programs/`.
 - Real report generation under `reports/`.
 - Generated session files under `sessions/`.
-- Future web, Docker, SOW, incident, readiness, or PowerPoint workflows.
+- Final Executive Status Report PDF content, layout, pagination, and visual quality.
+- Future Docker, incident, readiness, PowerPoint, or HTML artifact workflows.
 
 ## Environment Doctor
 
@@ -52,6 +57,8 @@ The doctor validates:
 - The current directory appears to be the repository root.
 - Required project directories exist.
 - Core application modules can be imported.
+- ReportLab 5.0.0 is installed.
+- Bundled Inter 4.1 Regular and SemiBold assets pass checksum validation.
 - `data/programs/` exists and is writable.
 - `reports/` exists and is writable, or could be created from the repository root.
 - `sessions/` exists and is writable, or could be created from the repository root.
@@ -67,6 +74,7 @@ The doctor does not validate:
 - Dependency installation.
 - Full CLI behavior.
 - JSON schema migration safety.
+- Final PDF rendering or visual quality.
 
 ## Manual Validation Before Committing
 

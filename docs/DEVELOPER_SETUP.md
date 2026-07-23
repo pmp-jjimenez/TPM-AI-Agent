@@ -70,13 +70,32 @@ which python
 python --version
 ```
 
-Install dependencies only if `requirements.txt` contains installable packages:
+Install the pinned and bounded dependencies:
 
 ```bash
 python -m pip install -r requirements.txt
 ```
 
-The current project uses only Python standard library imports and local modules, so no third-party runtime dependency is required by the checked-in application code.
+The application uses `pypdf` for selectable-text PDF extraction and validation,
+FastAPI dependencies for the read-only API, and the isolated `reportlab==5.0.0`
+backend dependency for ART-1.0. ReportLab is not imported by the Program domain,
+Markdown reporting, persistence, or renderer-neutral contracts.
+
+ART-1.0 owns two versioned Inter 4.1 static font assets under
+`app/assets/fonts/inter/`. Do not install or substitute a system copy of Inter. The
+runtime validates the bundled Regular and SemiBold files against their approved
+SHA-256 values. The directory also contains the SIL Open Font License 1.1 and official
+source metadata.
+
+After installing dependencies, validate the environment:
+
+```bash
+python scripts/doctor.py
+```
+
+The doctor reports the exact ReportLab version and bundled-font checksum status. It
+does not download fonts, generate PDFs, repair dependencies, or modify ReportLab
+configuration.
 
 ## Git Installation
 
