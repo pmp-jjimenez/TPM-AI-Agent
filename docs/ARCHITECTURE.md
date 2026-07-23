@@ -96,9 +96,9 @@ FastAPI publishes Swagger UI at `/docs` and OpenAPI JSON at `/openapi.json`. The
 
 The reporting engine owns transformation of validated program state into audience-specific artifacts. The current implementation is `app/executive.py`, which generates Markdown executive status reports. Future work may add PDF, presentation, scheduled, or template-driven output behind a stable backend interface while preserving deterministic inputs and auditable generated artifacts.
 
-ART-1.0 Increments 1–4 establish the dependency, truth-model, semantic-composition,
-and renderer-neutral design-system foundation for the future Executive Status Report
-PDF:
+ART-1.0 Increments 1–5 establish the dependency, truth-model,
+semantic-composition, renderer-neutral design system, and first concrete Executive
+Status Report PDF renderer:
 
 - `app/artifact_renderer.py` defines the renderer-neutral PDF format declaration,
   render context, in-memory result, generic renderer protocol, and bounded errors. It
@@ -108,9 +108,10 @@ PDF:
   deterministic application-relative paths, approved checksums, and bounded
   validation. It does not import or register ReportLab.
 - `app/pdf_reportlab_renderer.py` is the only current production module allowed to
-  reference ReportLab. It checks the exact 5.0.0 dependency, verifies font readiness,
-  and temporarily scopes and serializes access to ReportLab's process-global language
-  and invariant settings. It does not yet implement a renderer or generate a PDF.
+  reference ReportLab. It checks the exact 5.0.0 dependency, verifies and registers
+  bundled Inter Regular/SemiBold, temporarily scopes and serializes ReportLab global
+  configuration, maps relative design roles to renderer-local PDF measurements, and
+  renders the supplied semantic sequence to immutable in-memory PDF bytes.
 - `app/executive_report.py` owns the complete, immutable report truth model. It
   classifies source facts, deterministic values, recommendations, and missing values
   before any presentation decision is made.
@@ -145,8 +146,9 @@ PDF:
   package-manager, CDN, or mutable external paths.
 
 Existing Program domain, persistence, CLI, API, Gemini behavior, and Markdown report
-generation remain unchanged. No PDF report layout or output, CLI PDF action,
-PowerPoint renderer, or HTML renderer exists in this increment. The backend decision
+generation remain unchanged. Increment 5 adds US Letter portrait PDF layout but no
+filesystem output, filename selection, CLI PDF action, PowerPoint renderer, or HTML
+renderer. The backend decision
 is recorded in
 [ADR 0001](adr/0001-use-reportlab-as-isolated-art-1.0-pdf-backend.md).
 The design-system boundary is recorded in
@@ -195,7 +197,7 @@ The current product is a local CLI application backed by Markdown knowledge asse
 | `app/executive.py` | Generates Markdown Executive Status Reports under `reports/executive/`. |
 | `app/artifact_renderer.py` | Defines the renderer-neutral, in-memory artifact renderer foundation; only PDF is currently declared. |
 | `app/font_assets.py` | Resolves and validates the approved bundled Inter 4.1 static font assets without importing a renderer. |
-| `app/pdf_reportlab_renderer.py` | Inspects the isolated ReportLab 5.0.0 backend and safely scopes its process-global configuration; no PDF renderer exists yet. |
+| `app/pdf_reportlab_renderer.py` | Renders approved Executive Status Report semantics to an in-memory US Letter portrait PDF using bundled Inter fonts and safely scoped global configuration. |
 | `app/context_loader.py` | Loads selected Markdown context files for New Program prompt construction. |
 | `app/prompt_builder.py` | Builds the structured New Program prompt sent to the AI model. |
 | `app/pdf_extractor.py` | Validates local PDF paths and extracts bounded selectable text with metadata; it does not perform OCR. |
@@ -494,9 +496,9 @@ recorded in
 - Major Incident, Executive Review, and Operational Readiness are menu placeholders only.
 - Persona routing is integrated at the CLI and New Program prompt boundary, but there is no AI Expert Council orchestration.
 - Executive stakeholders such as sponsors, CIOs, CTOs, VPs, steering committees, finance, legal, and PMO leadership remain a future governance or stakeholder layer and are not implemented as a Stakeholder Council.
-- Executive report generation remains Markdown-only. ART-1.0 Increments 1–4 add
-  isolated renderer foundations, the report truth model, and renderer-neutral
-  semantic composition and design intent but no PDF workflow.
+- ART-1.0 Increment 5 provides an in-memory Executive Status Report PDF renderer.
+  Production filesystem output, filenames, and CLI PDF orchestration remain absent;
+  existing Markdown behavior is unchanged.
 - Gemini model availability and behavior depend on external API access and a configured `GEMINI_API_KEY`.
 - Persona routing is transient execution context only; there is no program schema change and routing is not persisted to program JSON.
 

@@ -1,4 +1,5 @@
 import ast
+from colorsys import rgb_to_hsv
 import inspect
 import sys
 import unittest
@@ -258,6 +259,24 @@ class ComponentAndDensityMappingTests(unittest.TestCase):
 
 
 class StatusAndAccessibilityTests(unittest.TestCase):
+    def test_caution_color_is_accessible_amber_yellow(self):
+        caution = SYSTEM.color(ColorRole.STATUS_CAUTION)
+        background = SYSTEM.color(ColorRole.SURFACE_EMPHASIS)
+        positive = SYSTEM.color(ColorRole.STATUS_POSITIVE)
+        negative = SYSTEM.color(ColorRole.STATUS_NEGATIVE)
+
+        self.assertEqual(caution.canonical_hex, "#8B6500")
+        self.assertGreaterEqual(
+            _contrast_ratio(caution.canonical_hex, background.canonical_hex),
+            SYSTEM.accessibility.normal_text_minimum_contrast_ratio,
+        )
+        hue, saturation, _ = rgb_to_hsv(*_normalized_rgb(caution.canonical_hex))
+        self.assertGreaterEqual(hue * 360, 40)
+        self.assertLessEqual(hue * 360, 50)
+        self.assertGreaterEqual(saturation, 0.9)
+        self.assertNotEqual(caution.canonical_hex, positive.canonical_hex)
+        self.assertNotEqual(caution.canonical_hex, negative.canonical_hex)
+
     def test_all_status_visual_roles_resolve(self):
         for role in StatusVisualRole:
             token = SYSTEM.status(role)
@@ -310,6 +329,32 @@ class StatusAndAccessibilityTests(unittest.TestCase):
         self.assertFalse(policy.critical_information_may_depend_only_on_hue)
         self.assertTrue(policy.alternating_rows_distinguishable)
         self.assertTrue(policy.callout_importance_distinguishable)
+
+
+def _normalized_rgb(value):
+    return tuple(int(value[index:index + 2], 16) / 255 for index in (1, 3, 5))
+
+
+def _relative_luminance(value):
+    channels = tuple(
+        channel / 12.92
+        if channel <= 0.04045
+        else ((channel + 0.055) / 1.055) ** 2.4
+        for channel in _normalized_rgb(value)
+    )
+    return (
+        0.2126 * channels[0]
+        + 0.7152 * channels[1]
+        + 0.0722 * channels[2]
+    )
+
+
+def _contrast_ratio(first, second):
+    lighter, darker = sorted(
+        (_relative_luminance(first), _relative_luminance(second)),
+        reverse=True,
+    )
+    return (lighter + 0.05) / (darker + 0.05)
 
 
 class LookupAndValidationTests(unittest.TestCase):

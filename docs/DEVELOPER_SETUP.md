@@ -97,6 +97,18 @@ The doctor reports the exact ReportLab version and bundled-font checksum status.
 does not download fonts, generate PDFs, repair dependencies, or modify ReportLab
 configuration.
 
+## Executive PDF visual review
+
+Generate the eight deterministic review fixtures with:
+
+```bash
+.venv/bin/python scripts/generate_pdf_visual_fixtures.py
+```
+
+Outputs are written to ignored `reports/pdf-visual-fixtures/`. Inspect them in a local
+PDF viewer and do not commit them. This developer-only utility is not production
+filesystem output or CLI integration.
+
 ## Git Installation
 
 Install Git with Homebrew if it is not already available:

@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Generic, Protocol, Tuple, TypeVar, runtime_checkable
+from typing import Generic, Optional, Protocol, Tuple, TypeVar, runtime_checkable
 
 
 MAX_DIAGNOSTIC_LENGTH = 160
@@ -33,10 +33,34 @@ class ArtifactConfigurationError(ArtifactRendererError):
 class RenderContext:
     language_tag: str
     deterministic_test_mode: bool = False
+    title: Optional[str] = None
+    subject: Optional[str] = None
+    author: Optional[str] = None
+    creator: Optional[str] = None
+    producer: Optional[str] = None
+    classification_label: Optional[str] = None
 
     def __post_init__(self):
         if not self.language_tag or len(self.language_tag) > 35:
             raise ValueError("language_tag must be a bounded non-empty value")
+        for field_name in (
+            "title",
+            "subject",
+            "author",
+            "creator",
+            "producer",
+            "classification_label",
+        ):
+            value = getattr(self, field_name)
+            if value is not None and (
+                not isinstance(value, str)
+                or not value.strip()
+                or len(value) > 200
+            ):
+                raise ValueError(f"{field_name} must be a bounded non-empty value")
+
+
+ArtifactRenderContext = RenderContext
 
 
 @dataclass(frozen=True)

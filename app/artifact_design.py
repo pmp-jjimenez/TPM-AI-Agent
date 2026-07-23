@@ -455,7 +455,7 @@ def _color_tokens():
         (ColorRole.BORDER_EMPHASIS, "#526273", GrayscaleTone.DARK),
         (ColorRole.ACCENT, "#174A7E", GrayscaleTone.DARK),
         (ColorRole.STATUS_POSITIVE, "#246B45", GrayscaleTone.DARK),
-        (ColorRole.STATUS_CAUTION, "#8A5A00", GrayscaleTone.DARK),
+        (ColorRole.STATUS_CAUTION, "#8B6500", GrayscaleTone.DARK),
         (ColorRole.STATUS_NEGATIVE, "#A1262D", GrayscaleTone.DARK),
         (ColorRole.STATUS_NEUTRAL, "#5C6773", GrayscaleTone.DARK),
         (ColorRole.STATUS_INFORMATION, "#245B8A", GrayscaleTone.DARK),

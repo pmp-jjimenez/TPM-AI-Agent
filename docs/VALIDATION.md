@@ -32,6 +32,10 @@ Current automated coverage validates:
   mapping, non-adaptive density, contrast requirements, textual reinforcement,
   grayscale policy, and rejection of incomplete or contradictory systems without
   importing renderer libraries.
+- In-memory ReportLab rendering of all eight components on US Letter portrait pages,
+  bundled Inter embedding, selectable escaped text, pagination and repeated page
+  chrome, PDF security structure, metadata, invariant byte equality, input
+  immutability, and serialized/restored ReportLab global configuration.
 - Program memory create, save, and reload behavior in a temporary directory.
 - Prompt builder inclusion of project description, TPM context, and expected assessment sections.
 - Executive report generation in a temporary reports directory.
@@ -44,10 +48,9 @@ The automated tests do not validate:
 - Real program records under `data/programs/`.
 - Real report generation under `reports/`.
 - Generated session files under `sessions/`.
-- Final Executive Status Report PDF content, layout, pagination, and visual quality.
-- Future renderer layout and artifact output behavior.
-- Rendered contrast, grayscale output, reading order, selectable text, or visual
-  quality; Increment 4 defines requirements but produces no artifact.
+- Human visual approval of the Executive Status Report PDF.
+- Certified PDF/UA, tagged-PDF, WCAG, or screen-reader conformance.
+- Production PDF filesystem output, filenames, and CLI integration.
 - Future Docker, incident, readiness, PowerPoint, or HTML artifact workflows.
 
 ## Environment Doctor
@@ -112,3 +115,30 @@ git diff -- data/programs reports sessions
 ```
 
 Do not commit generated reports, generated session artifacts, secrets, or unintended changes to program JSON records.
+
+## PDF visual fixtures and manual review
+
+Run:
+
+```bash
+.venv/bin/python scripts/generate_pdf_visual_fixtures.py
+ls -lh reports/pdf-visual-fixtures
+```
+
+The ignored directory contains sparse, healthy compact, warning, critical, long
+multipage, missing-data, special-character, and omitted-record scenarios. Automated
+tests do not claim visual approval.
+
+For every fixture, manually review hierarchy, typography, spacing, recommendation
+prominence, wrapping, long IDs, special characters, multipage flow, repeated page
+chrome, numbering, grayscale readability, textual status distinction, empty and
+missing states, omission disclosure, completeness notices, evidence visibility,
+clipping, and reasonably avoidable orphaned headings. The renderer provides
+selectable text and component-order reading flow but does not claim PDF/UA, tagged
+PDF, WCAG, or screen-reader certification.
+
+Paragraph alignment remains left-aligned for IDs, metadata, metrics, technical
+record fields, completeness codes, affected-record lists, empty-state messages,
+and page headers and footers. Selective justification of narrative paragraphs may
+be evaluated in a later increment; universal justification is not approved and is
+not part of the caution-color correction.

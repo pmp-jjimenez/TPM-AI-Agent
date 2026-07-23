@@ -172,7 +172,11 @@ presentation-intent vocabulary, and `executive_artifact.py` composes the truth m
 without recalculation, rendering, or data loss. `artifact_design.py` owns closed,
 immutable renderer-neutral visual tokens, accessibility and grayscale policies, and
 strict mappings for all semantic component types; it contains no absolute
-measurements or renderer-native objects. `intelligence.py` is the side-effect-
+measurements or renderer-native objects. `pdf_reportlab_renderer.py` validates those
+contracts, maps tokens to US Letter PDF measurements, registers bundled Inter fonts,
+and returns immutable PDF bytes without filenames or filesystem output.
+`scripts/generate_pdf_visual_fixtures.py` is a developer-only generator whose output
+is confined to ignored `reports/pdf-visual-fixtures/`. `intelligence.py` is the side-effect-
 free orchestration boundary and
 `intelligence_analysis.py` owns strict bounded parsing; existing CLI modules continue
 to own input/output, persistence mutations, and generated artifacts.

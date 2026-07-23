@@ -34,8 +34,11 @@ by default while disclosing every omission. Increment 4 adds the
 immutable renderer-neutral Artifact Design System: closed relative typography and
 spacing scales, restrained semantic color, surface, border, status, emphasis, and
 density roles, exact eight-component mappings, and accessibility and grayscale
-requirements. It adds no concrete layout, file output, or Executive Status Report PDF
-generation.
+requirements. Increment 5 adds the first concrete renderer: an in-memory, US Letter
+portrait Executive Status Report PDF with bundled Inter typography, renderer-local
+token measurements, selectable text, multipage flow, and repeated page chrome. It
+does not add filesystem output, filenames, or a CLI PDF action, and manual visual
+approval remains a release gate.
 
 The v0.8.0 production deliverable remains one Executive Status Report PDF alongside
 the preserved Markdown report. PowerPoint, HTML, Project Charter, Operational
