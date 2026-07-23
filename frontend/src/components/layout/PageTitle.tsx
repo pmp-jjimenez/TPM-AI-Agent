@@ -7,10 +7,10 @@ interface PageTitleProps {
 
 export function PageTitle({ title, description }: PageTitleProps) {
   return (
-    <Box component="header" sx={{ mb: 3 }}>
+    <Box component="header" sx={{ mb: { xs: 2.5, md: 3.5 } }}>
       <Typography component="h1" variant="h1">{title}</Typography>
       {description && (
-        <Typography color="text.secondary" sx={{ mt: 0.75, maxWidth: 720 }}>
+        <Typography color="text.secondary" sx={{ mt: 0.75, maxWidth: 720, lineHeight: 1.65 }}>
           {description}
         </Typography>
       )}

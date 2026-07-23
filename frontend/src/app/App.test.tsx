@@ -108,7 +108,14 @@ describe('Programs page', () => {
     vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}));
     renderApp('/programs');
 
-    expect(screen.getByText('TPM Operating System')).toBeInTheDocument();
+    expect(screen.getAllByText('TPM Operating System').length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('navigation', { name: 'Primary navigation' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Executive Review').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Major Incidents').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Operational Readiness').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Reports').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Settings').length).toBeGreaterThan(0);
+    expect(screen.getByLabelText('Future workspace actions')).toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveTextContent('Loading programs');
   });
 
