@@ -350,6 +350,31 @@ Canonical persona identifiers are stable strings:
 
 This layer is intentionally independent of Gemini. It does not call an AI model, create autonomous agents, synthesize council output, mutate program records, or change CLI menu behavior. Deterministic routing comes before multi-agent AI orchestration because the system needs testable persona selection, stable ordering, explainable reasons, and backward-compatible behavior before model calls are composed around those decisions.
 
+## Product Design System v1
+
+The React frontend uses a centralized Material UI theme in `frontend/src/app/theme.ts`
+with TypeScript augmentation in `frontend/src/app/mui.d.ts`. `designTokens` owns the
+light-mode brand accent, neutral canvas and surfaces, readable text hierarchy, subtle
+and strong borders, semantic health/information/confidence colors, radii, borders, and
+restrained shadows. Theme component overrides provide consistent keyboard focus,
+controls, cards, paper, chips, tooltips, dividers, drawers, app bars, navigation items,
+skeletons, and alerts. Page components reference semantic theme paths instead of
+repeating raw colors.
+
+Custom typography variants cover page eyebrow/title/subtitle, section and card titles,
+metrics, supporting copy, and metadata. Shared primitives under
+`frontend/src/components/ui/` provide Surface, SectionHeader, MetricDisplay,
+MetadataList, SubtleDivider, and typed operational badges. HealthStatusBadge,
+ConfidenceBadge, PhaseBadge, and SeverityBadge normalize display aliases only; they do
+not change backend enumerations, parsing, stored values, or business logic. Every badge
+includes readable text and a visual marker, and unsupported input safely renders
+Unknown rather than rejecting otherwise valid program data.
+
+Product Design System v1 is light-mode only and applies a visual consistency pass to
+the shell, Command Center, Program Workspace, feedback, and not-found views. It does
+not add a logo, custom font dependency, dark or selectable themes, animation framework,
+charts, new routes, or a full information-architecture redesign.
+
 ## Current Limitations
 
 - The browser supports read-only program browsing and workspace views; the CLI remains the interface for mutations.

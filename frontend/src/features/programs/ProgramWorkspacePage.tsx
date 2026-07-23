@@ -6,6 +6,7 @@ import { ApiError } from '../../api/client';
 import { ErrorState } from '../../components/feedback/ErrorState';
 import { LoadingState } from '../../components/feedback/LoadingState';
 import { PageContainer } from '../../components/layout/PageContainer';
+import { ConfidenceBadge, HealthStatusBadge, PhaseBadge, SeverityBadge } from '../../components/ui/StatusBadges';
 import {
   MetadataGrid,
   IntelligenceResult,
@@ -155,15 +156,15 @@ export function ProgramWorkspacePage() {
     <PageContainer>
       <Stack spacing={{ xs: 4, md: 5 }}>
         <Paper component="header" variant="outlined" sx={{ p: { xs: 2.5, sm: 3.5 }, overflow: 'hidden' }}>
-          <Typography variant="caption" color="text.secondary">Program Workspace</Typography>
-          <Typography component="h1" variant="h1" sx={{ mt: 0.5, overflowWrap: 'anywhere' }}>
+          <Typography variant="pageEyebrow" color="text.muted">Program Workspace</Typography>
+          <Typography component="h1" variant="pageTitle" sx={{ mt: 0.5, overflowWrap: 'anywhere' }}>
             {usableText(program.program_name) ?? 'Program name unavailable'}
           </Typography>
-          <Typography color="text.secondary" sx={{ mt: 0.75, overflowWrap: 'anywhere' }}>Program ID: {program.program_id}</Typography>
+          <Typography variant="metadata" color="text.muted" sx={{ mt: 0.75, overflowWrap: 'anywhere' }}>Program ID: {program.program_id}</Typography>
           <Grid2 container spacing={1.5} sx={{ mt: 2 }} data-testid="executive-header-status-grid">
-            <Grid2 size={{ xs: 12, sm: 4 }}><StatusCard label="Current Phase" value={usableText(program.phase)} /></Grid2>
-            <Grid2 size={{ xs: 12, sm: 4 }}><StatusCard label="Health" value={usableText(program.health)} /></Grid2>
-            <Grid2 size={{ xs: 12, sm: 4 }}><StatusCard label="Confidence" value={usableText(program.confidence)} /></Grid2>
+            <Grid2 size={{ xs: 12, sm: 4 }}><StatusCard label="Current Phase" value={<PhaseBadge value={usableText(program.phase)} />} /></Grid2>
+            <Grid2 size={{ xs: 12, sm: 4 }}><StatusCard label="Health" value={<HealthStatusBadge value={usableText(program.health)} />} /></Grid2>
+            <Grid2 size={{ xs: 12, sm: 4 }}><StatusCard label="Confidence" value={<ConfidenceBadge value={usableText(program.confidence)} />} /></Grid2>
           </Grid2>
         </Paper>
 
@@ -173,9 +174,9 @@ export function ProgramWorkspacePage() {
 
         <WorkspaceSection title="Program Health" description="Reported program values; no composite score is calculated.">
           <Grid2 container spacing={1.5} data-testid="program-health-grid">
-            <Grid2 size={{ xs: 12, md: 4 }}><StatusCard label="Current Phase" value={usableText(program.phase)} /></Grid2>
-            <Grid2 size={{ xs: 12, md: 4 }}><StatusCard label="Health" value={usableText(program.health)} /></Grid2>
-            <Grid2 size={{ xs: 12, md: 4 }}><StatusCard label="Confidence" value={usableText(program.confidence)} /></Grid2>
+            <Grid2 size={{ xs: 12, md: 4 }}><StatusCard label="Current Phase" value={<PhaseBadge value={usableText(program.phase)} />} /></Grid2>
+            <Grid2 size={{ xs: 12, md: 4 }}><StatusCard label="Health" value={<HealthStatusBadge value={usableText(program.health)} />} /></Grid2>
+            <Grid2 size={{ xs: 12, md: 4 }}><StatusCard label="Confidence" value={<ConfidenceBadge value={usableText(program.confidence)} />} /></Grid2>
           </Grid2>
         </WorkspaceSection>
 
@@ -206,7 +207,7 @@ export function ProgramWorkspacePage() {
               </Stack>
             </Paper>
           ) : (
-            <Paper variant="outlined" sx={{ p: { xs: 3, sm: 4 }, textAlign: 'center', bgcolor: '#fafbfc' }}>
+            <Paper variant="outlined" sx={{ p: { xs: 3, sm: 4 }, textAlign: 'center', bgcolor: 'background.subtle' }}>
               <Typography fontWeight={650}>No milestones recorded</Typography>
               <Typography color="text.secondary" sx={{ mt: 0.5 }}>This program does not contain supported milestone records.</Typography>
             </Paper>
@@ -250,12 +251,11 @@ export function ProgramWorkspacePage() {
           <Stack spacing={1.5}>
             {issues.length ? issues.map((issue) => (
               <Paper key={issue.object_id} variant="outlined" sx={{ p: 2 }}>
-                <Typography fontWeight={600}>{issue.title}</Typography>
+                    <Stack direction="row" justifyContent="space-between" gap={2}><Typography fontWeight={600}>{issue.title}</Typography>{issue.severity ? <SeverityBadge value={issue.severity} /> : null}</Stack>
                 {[
                   `Status: ${issue.status}`,
                   issue.owner && `Owner: ${issue.owner.display_name}`,
                   issue.due_date && `Due date: ${issue.due_date}`,
-                  issue.severity && `Severity: ${issue.severity}`,
                   issue.impact && `Impact: ${issue.impact}`,
                   issue.resolution_summary && `Resolution: ${issue.resolution_summary}`,
                   issue.resolved_at && `Resolved: ${issue.resolved_at}`,
@@ -314,7 +314,7 @@ export function ProgramWorkspacePage() {
               <ErrorState title="Intelligence is unavailable" message="The workspace remains available. Try generating intelligence again when the service is reachable." />
             ) : null}
             {!intelligence && !intelligenceLoading && !intelligenceError ? (
-              <Paper variant="outlined" sx={{ p: 3, bgcolor: '#fafbfc' }}><Typography color="text.secondary">Intelligence has not been generated for this workspace session.</Typography></Paper>
+              <Paper variant="outlined" sx={{ p: 3, bgcolor: 'background.subtle' }}><Typography color="text.secondary">Intelligence has not been generated for this workspace session.</Typography></Paper>
             ) : null}
             {intelligence && !intelligenceLoading ? <IntelligenceResult intelligence={intelligence} /> : null}
           </Stack>

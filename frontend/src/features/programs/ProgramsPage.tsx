@@ -74,9 +74,9 @@ export function ProgramsPage() {
     <PageContainer>
       <Stack spacing={{ xs: 4, md: 5 }}>
         <header>
-          <Typography variant="body2" color="text.secondary" fontWeight={600}>{greeting()}</Typography>
-          <Typography component="h1" variant="h1" sx={{ mt: 0.5 }}>TPM Command Center</Typography>
-          <Typography color="text.secondary" sx={{ mt: 0.75 }}>Manage complex enterprise programs with confidence.</Typography>
+          <Typography variant="pageEyebrow" color="text.muted">{greeting()}</Typography>
+          <Typography component="h1" variant="pageTitle" sx={{ mt: 0.5 }}>TPM Command Center</Typography>
+          <Typography variant="pageSubtitle" color="text.secondary" sx={{ mt: 0.75 }}>Manage complex enterprise programs with confidence.</Typography>
         </header>
 
         {presentation ? (

@@ -2,6 +2,22 @@
 
 This release history is based on the actual Git history available in the repository. Some commits do not carry explicit sprint numbers. Where exact sprint mapping is uncertain, that uncertainty is stated rather than inferred.
 
+## Product Design System v1 — UX-1.2.5
+
+Established a centralized Material UI design system for the frontend with a restrained
+enterprise palette, semantic surface/border/text/status/confidence tokens, compact
+operational typography variants, consistent shape and elevation rules, visible focus
+states, and shared component overrides. Raw visual decisions are now concentrated in
+the theme rather than repeated across product screens.
+
+Added typed Health, Confidence, Phase, and Severity badges with normalized display
+labels, text and marker redundancy, and safe Unknown fallbacks. Shared Surface,
+SectionHeader, MetricDisplay, MetadataList, and divider primitives support future
+screens. The application shell, Command Center, Program Workspace, feedback states,
+and not-found experience use the system without changing routes, business behavior,
+backend contracts, or stored domain values. Dark mode, selectable themes, branding,
+charts, and full workspace redesign remain out of scope.
+
 ## Home Command Center — UX-1.2
 
 Transformed the existing Programs landing experience into a decision-oriented TPM

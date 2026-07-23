@@ -1,24 +1,15 @@
 import { Box, Chip, Grid2, Paper, Stack, Typography } from '@mui/material';
 import type { ReactNode } from 'react';
+import { SectionHeader } from '../../components/ui/Primitives';
 import type { IntelligenceResponse } from './programTypes';
 
-export function SectionHeader({ title, description }: { title: string; description?: string }) {
-  return (
-    <Box>
-      <Typography component="h2" variant="h2">{title}</Typography>
-      {description ? <Typography color="text.secondary" sx={{ mt: 0.5 }}>{description}</Typography> : null}
-    </Box>
-  );
-}
+export { SectionHeader };
 
-export function StatusCard({ label, value }: { label: string; value?: string }) {
-  const uncertain = !value || value.toLowerCase() === 'unknown';
+export function StatusCard({ label, value }: { label: string; value?: ReactNode }) {
   return (
-    <Paper variant="outlined" sx={{ height: '100%', p: 2, bgcolor: uncertain ? '#f8fafc' : 'background.paper' }}>
-      <Typography variant="caption" color="text.secondary">{label}</Typography>
-      <Typography sx={{ mt: 0.5, fontWeight: 650, color: uncertain ? 'text.secondary' : 'text.primary', overflowWrap: 'anywhere' }}>
-        {value ?? '—'}
-      </Typography>
+    <Paper variant="outlined" sx={{ height: '100%', p: 2, bgcolor: 'background.subtle' }}>
+      <Typography variant="metadata" color="text.muted">{label}</Typography>
+      <Box sx={{ mt: 0.75, overflowWrap: 'anywhere' }}>{value ?? '—'}</Box>
     </Paper>
   );
 }
@@ -30,7 +21,7 @@ export function MetadataGrid({ items }: { items: MetadataItem[] }) {
     <Grid2 container spacing={{ xs: 2, sm: 3 }}>
       {items.map(({ label, value }) => (
         <Grid2 key={label} size={{ xs: 12, sm: 6 }}>
-          <Typography variant="caption" color="text.secondary">{label}</Typography>
+          <Typography variant="metadata" color="text.muted">{label}</Typography>
           <Typography component="div" sx={{ mt: 0.25, lineHeight: 1.6, overflowWrap: 'anywhere', whiteSpace: 'pre-wrap' }}>
             {value ?? '—'}
           </Typography>
@@ -42,7 +33,7 @@ export function MetadataGrid({ items }: { items: MetadataItem[] }) {
 
 export function MissingInformationCard({ fields }: { fields: string[] }) {
   return (
-    <Paper variant="outlined" sx={{ p: { xs: 2, sm: 2.5 }, bgcolor: '#fafbfc' }}>
+    <Paper variant="outlined" sx={{ p: { xs: 2, sm: 2.5 }, bgcolor: 'background.subtle' }}>
       {fields.length ? (
         <>
           <Typography color="text.secondary" sx={{ mb: 1.5 }}>
@@ -123,7 +114,7 @@ export function IntelligenceResult({ intelligence }: { intelligence: Intelligenc
         {intelligence.decisions_required.length ? <Stack spacing={1.5}>{intelligence.decisions_required.map((decision) => <Paper variant="outlined" sx={{ p: 2 }} key={decision.id}><Stack direction="row" justifyContent="space-between" gap={2}><Typography fontWeight={650}>{decision.statement}</Typography><Chip label={decision.priority} size="small" /></Stack><Typography color="text.secondary" sx={{ mt: 0.5 }}>{decision.reason}</Typography></Paper>)}</Stack> : <Typography color="text.secondary">No decisions are currently required.</Typography>}
       </Box>
       {intelligence.limitations.length ? (
-        <Paper variant="outlined" sx={{ p: 2, bgcolor: '#fafbfc' }}>
+        <Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.subtle' }}>
           <Typography component="h3" fontWeight={650} sx={{ mb: 1 }}>Limitations</Typography>
           <IntelligenceList items={intelligence.limitations} empty="No limitations were reported." />
         </Paper>

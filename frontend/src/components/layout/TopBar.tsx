@@ -45,11 +45,11 @@ export function TopBar({ onMenuOpen }: TopBarProps) {
           <MenuRoundedIcon />
         </IconButton>
         <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0 }}>
-          <Typography sx={{ fontSize: '0.875rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
+          <Typography variant="metadata" sx={{ whiteSpace: 'nowrap' }}>
             TPM Operating System
           </Typography>
           <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', sm: 'block' } }} />
-          <Typography component="div" sx={{ display: { xs: 'none', sm: 'block' }, fontSize: '0.95rem', fontWeight: 650, color: 'text.primary', whiteSpace: 'nowrap' }}>
+          <Typography component="div" variant="cardTitle" sx={{ display: { xs: 'none', sm: 'block' }, color: 'text.primary', whiteSpace: 'nowrap' }}>
             {pageTitle(location.pathname)}
           </Typography>
         </Stack>

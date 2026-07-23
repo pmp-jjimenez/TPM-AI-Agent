@@ -133,7 +133,7 @@ describe('Programs page', () => {
     expect(screen.getByRole('article', { name: 'Active Programs: 3' })).toBeInTheDocument();
     const headings = screen.getAllByRole('heading', { level: 3 });
     expect(headings.map((heading) => heading.textContent)).toEqual(['—', 'Alpha Program', 'Zulu']);
-    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(3);
+    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
     expect(screen.queryByText('Invalid')).not.toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith('https://api.test/programs', expect.objectContaining({ method: 'GET' }));
   });
@@ -188,7 +188,7 @@ describe('Program workspace', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Alpha Program' })).toBeInTheDocument();
     expect(screen.getByText('Program ID: alpha-program')).toBeInTheDocument();
     expect(screen.getByText('Alpha description Customer: Alpha customer. Current phase: Delivery. Health: Green. Confidence: High.')).toBeInTheDocument();
-    expect(screen.getAllByText('Green')).toHaveLength(2);
+    expect(screen.getAllByLabelText('Health: Healthy')).toHaveLength(2);
     expect(screen.getByText('Jul 17, 2026')).toBeInTheDocument();
     expect(screen.getByText('test')).toBeInTheDocument();
     expect(screen.queryByText('Kickoff')).not.toBeInTheDocument();
@@ -377,7 +377,7 @@ describe('Program workspace', () => {
     expect(await screen.findByRole('heading', { level: 2, name: 'Stored Issues' })).toBeInTheDocument();
     expect(screen.getByText('Stored access issue')).toBeInTheDocument();
     expect(screen.getByText('Owner: Operations')).toBeInTheDocument();
-    expect(screen.getByText('Severity: high')).toBeInTheDocument();
+    expect(screen.getByLabelText('Severity: High')).toBeInTheDocument();
     expect(screen.getByText('Resolution: Access granted')).toBeInTheDocument();
   });
 
@@ -429,7 +429,9 @@ describe('Program workspace', () => {
 
     const headerGrid = await screen.findByTestId('executive-header-status-grid');
     const healthGrid = screen.getByTestId('program-health-grid');
-    expect(within(headerGrid).getAllByText(/Current Phase|Health|Confidence/)).toHaveLength(3);
+    expect(within(headerGrid).getByText('Current Phase')).toBeInTheDocument();
+    expect(within(headerGrid).getByText('Health')).toBeInTheDocument();
+    expect(within(headerGrid).getByText('Confidence')).toBeInTheDocument();
     expect(headerGrid.querySelectorAll('.MuiGrid2-grid-xs-12')).toHaveLength(3);
     expect(healthGrid.querySelectorAll('.MuiGrid2-grid-xs-12')).toHaveLength(3);
   });

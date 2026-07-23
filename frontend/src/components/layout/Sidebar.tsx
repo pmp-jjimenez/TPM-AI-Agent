@@ -62,8 +62,8 @@ function NavigationGroup({ label, items, onNavigate }: { label: string; items: N
               borderRadius: 1.25,
               mb: 0.25,
               color: 'text.secondary',
-              '&:hover': { bgcolor: 'action.hover', color: 'text.primary' },
-              '&.active': { bgcolor: 'primary.light', color: 'primary.dark' },
+              '&:hover': { bgcolor: 'surface.sunken', color: 'text.primary' },
+              '&.active': { bgcolor: 'primary.light', color: 'primary.dark', boxShadow: 'inset 2px 0 0', boxShadowColor: 'primary.main' },
               '&.active .MuiListItemIcon-root': { color: 'primary.main' },
             }}
           >
@@ -88,13 +88,13 @@ function NavigationGroup({ label, items, onNavigate }: { label: string; items: N
 
 function SidebarContent({ onNavigate }: { onNavigate: () => void }) {
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100%', bgcolor: 'background.paper' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100%', bgcolor: 'background.subtle' }}>
       <Box sx={{ height: { xs: 64, md: 72 }, px: 3, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
         <Box>
-          <Typography sx={{ fontSize: '0.95rem', fontWeight: 750, letterSpacing: '-0.015em', color: 'text.primary' }}>
+          <Typography variant="cardTitle" color="text.primary">
             TPM Operating System
           </Typography>
-          <Typography variant="caption" color="text.secondary">Program workspace</Typography>
+          <Typography variant="metadata" color="text.muted">Program workspace</Typography>
         </Box>
       </Box>
       <Divider />

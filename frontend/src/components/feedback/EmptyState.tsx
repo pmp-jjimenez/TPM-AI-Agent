@@ -12,13 +12,13 @@ export function EmptyState({ title, description, icon = <InboxOutlinedIcon /> }:
   return (
     <Paper
       variant="outlined"
-      sx={{ px: { xs: 3, sm: 6 }, py: { xs: 6, sm: 8 }, textAlign: 'center', bgcolor: 'background.paper' }}
+      sx={{ px: { xs: 3, sm: 6 }, py: { xs: 5, sm: 6 }, textAlign: 'center', bgcolor: 'background.subtle' }}
     >
-      <Box aria-hidden="true" sx={{ display: 'inline-flex', p: 1.5, mb: 2, borderRadius: 1.5, bgcolor: '#eef2f7', color: 'text.secondary', '& svg': { fontSize: 30 } }}>
+      <Box aria-hidden="true" sx={{ display: 'inline-flex', p: 1.25, mb: 2, borderRadius: 1.5, bgcolor: 'surface.sunken', color: 'text.secondary', '& svg': { fontSize: 28 } }}>
         {icon}
       </Box>
-      <Typography component="h2" variant="h2">{title}</Typography>
-      <Typography color="text.secondary" sx={{ maxWidth: 580, mx: 'auto', mt: 1.25, lineHeight: 1.65 }}>
+      <Typography component="h2" variant="sectionTitle">{title}</Typography>
+      <Typography variant="supporting" color="text.secondary" sx={{ display: 'block', maxWidth: 580, mx: 'auto', mt: 1.25 }}>
         {description}
       </Typography>
     </Paper>

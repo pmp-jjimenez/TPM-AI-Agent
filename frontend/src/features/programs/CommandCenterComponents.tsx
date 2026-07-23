@@ -1,19 +1,18 @@
 import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
 import CheckCircleOutlineRoundedIcon from '@mui/icons-material/CheckCircleOutlineRounded';
-import { Box, Button, Card, CardContent, Chip, Divider, Stack, Typography } from '@mui/material';
+import { Box, Button, Card, CardContent, Divider, Stack, Typography } from '@mui/material';
 import type { ReactNode } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
+import { MetricDisplay, SectionHeader, Surface } from '../../components/ui/Primitives';
+import { ConfidenceBadge, HealthStatusBadge, PhaseBadge } from '../../components/ui/StatusBadges';
 import type { ProgramRecord } from './programTypes';
 import { usableText } from './programTypes';
 
 export function DashboardSection({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
   return (
     <Box component="section">
-      <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2} sx={{ mb: 1.5 }}>
-        <Typography component="h2" variant="h2">{title}</Typography>
-        {action}
-      </Stack>
+      <Box sx={{ mb: 1.5 }}><SectionHeader title={title} action={action} /></Box>
       {children}
     </Box>
   );
@@ -21,17 +20,9 @@ export function DashboardSection({ title, action, children }: { title: string; a
 
 export function SummaryCard({ icon, metric, label }: { icon: ReactNode; metric: string | number; label: string }) {
   return (
-    <Card component="article" aria-label={`${label}: ${metric}`} variant="outlined" sx={{ height: '100%' }}>
+    <Card component="article" aria-label={`${label}: ${metric}`} variant="outlined" sx={{ height: '100%', transition: 'border-color 120ms ease', '&:hover': { borderColor: 'border.strong' } }}>
       <CardContent sx={{ p: 2.25, '&:last-child': { pb: 2.25 } }}>
-        <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={2}>
-          <Box>
-            <Typography sx={{ fontSize: '1.5rem', lineHeight: 1.2, fontWeight: 700, letterSpacing: '-0.025em' }}>{metric}</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>{label}</Typography>
-          </Box>
-          <Box sx={{ display: 'grid', placeItems: 'center', width: 36, height: 36, borderRadius: 2, bgcolor: 'primary.light', color: 'primary.main', flexShrink: 0 }}>
-            {icon}
-          </Box>
-        </Stack>
+        <MetricDisplay value={metric} label={label} icon={<Box sx={{ display: 'grid', placeItems: 'center', width: 36, height: 36, borderRadius: 1.25, bgcolor: 'primary.light', color: 'primary.main', flexShrink: 0 }}>{icon}</Box>} />
       </CardContent>
     </Card>
   );
@@ -68,14 +59,14 @@ export function FocusCard() {
 
 export function AIAdvisorCard() {
   return (
-    <Card variant="outlined" sx={{ height: '100%', bgcolor: '#fbfcff' }}>
+    <Card variant="outlined" sx={{ height: '100%', bgcolor: 'background.subtle' }}>
       <CardContent sx={{ p: { xs: 2.5, md: 3 }, '&:last-child': { pb: { xs: 2.5, md: 3 } }, height: '100%', display: 'flex', flexDirection: 'column' }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
           <Stack direction="row" alignItems="center" spacing={1}>
             <AutoAwesomeOutlinedIcon color="primary" fontSize="small" />
             <Typography component="h2" variant="h2">AI Advisor</Typography>
           </Stack>
-          <Chip label="Confidence: HIGH" size="small" color="success" variant="outlined" sx={{ fontWeight: 700, fontSize: '0.7rem' }} />
+          <ConfidenceBadge value="High" contextual />
         </Stack>
         <Typography sx={{ mt: 3, fontSize: '1.05rem', lineHeight: 1.7, maxWidth: 560 }}>
           No critical blockers detected. Review open dependencies before the next executive review.
@@ -88,25 +79,16 @@ export function AIAdvisorCard() {
   );
 }
 
-function ProgramField({ label, value }: { label: string; value?: string }) {
-  return (
-    <Box>
-      <Typography variant="caption" color="text.secondary">{label}</Typography>
-      <Typography variant="body2" fontWeight={600} sx={{ mt: 0.25 }}>{value ?? '—'}</Typography>
-    </Box>
-  );
-}
-
 export function ProgramPreviewCard({ program }: { program: ProgramRecord }) {
   const name = usableText(program.program_name) ?? '—';
   return (
-    <Card variant="outlined" sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Surface sx={{ height: '100%', display: 'flex', flexDirection: 'column', transition: 'border-color 120ms ease', '&:hover': { borderColor: 'border.strong' } }}>
       <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 }, display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <Typography component="h3" variant="h3" sx={{ overflowWrap: 'anywhere' }}>{name}</Typography>
+        <Typography component="h3" variant="cardTitle" sx={{ overflowWrap: 'anywhere' }}>{name}</Typography>
         <Stack direction="row" spacing={3} sx={{ mt: 2.25, mb: 2.5, flexWrap: 'wrap', rowGap: 1.5 }}>
-          <ProgramField label="Phase" value={usableText(program.phase)} />
-          <ProgramField label="Health" value={usableText(program.health)} />
-          <ProgramField label="Confidence" value={usableText(program.confidence)} />
+          <PhaseBadge value={usableText(program.phase)} />
+          <HealthStatusBadge value={usableText(program.health)} />
+          <ConfidenceBadge value={usableText(program.confidence)} />
         </Stack>
         <Button
           component={RouterLink}
@@ -119,6 +101,6 @@ export function ProgramPreviewCard({ program }: { program: ProgramRecord }) {
           Open Program
         </Button>
       </CardContent>
-    </Card>
+    </Surface>
   );
 }

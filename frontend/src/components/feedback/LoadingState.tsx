@@ -1,4 +1,4 @@
-import { CircularProgress, Stack, Typography } from '@mui/material';
+import { Skeleton, Stack, Typography } from '@mui/material';
 
 interface LoadingStateProps {
   message?: string;
@@ -6,9 +6,10 @@ interface LoadingStateProps {
 
 export function LoadingState({ message = 'Loading' }: LoadingStateProps) {
   return (
-    <Stack role="status" alignItems="center" spacing={2} sx={{ py: 8 }}>
-      <CircularProgress size={28} />
-      <Typography color="text.secondary">{message}</Typography>
+    <Stack role="status" alignItems="center" spacing={1.5} sx={{ py: 7 }}>
+      <Skeleton variant="rounded" width={180} height={10} />
+      <Skeleton variant="rounded" width={120} height={10} />
+      <Typography variant="supporting" color="text.secondary" sx={{ mt: 1 }}>{message}</Typography>
     </Stack>
   );
 }
