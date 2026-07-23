@@ -16,18 +16,10 @@ import {
   type OperationalItem,
   type PriorityItem,
 } from './MissionControlComponents';
+import { displayDate } from './dateFormatting';
 import { getProgram } from './programApi';
 import type { ProgramRecord } from './programTypes';
 import { usableText } from './programTypes';
-
-function displayDate(value: unknown): string | undefined {
-  const text = usableText(value);
-  if (!text) return undefined;
-  if (!/^\d{4}-\d{2}-\d{2}(?:T.*)?$/.test(text)) return text;
-  const parsed = new Date(text);
-  if (Number.isNaN(parsed.getTime())) return text;
-  return new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }).format(parsed);
-}
 
 function ownerName(owner: { display_name: string } | null): string | undefined { return owner?.display_name; }
 function detail(label: string, value?: string | null) { return { label, value }; }
