@@ -312,3 +312,18 @@ Workspace Intelligence remains Contract `1.0.0`; Issue title evidence is catalog
 stable RFC 6901 paths `/issuesById/<UUID>/title`. The read API transports canonical
 Issues and the React workspace strictly parses and renders them read-only. Dependency
 adoption, CRUD endpoints, relationship inference/UI, and graph traversal remain deferred.
+
+## RAID Adoption v1 — Dependency Adoption — US-57.3
+
+Adopted Dependency as the fourth canonical RAID entity on `ProgramEntity`. Program Schema
+`1.4.0` provides UUID identity, controlled status and dependency type, owner/lifecycle/audit
+metadata, dependency target, external party, required-by date, impact, and mitigation plan.
+Legacy strings and dictionaries normalize non-mutatively with deterministic UUIDv5 identity;
+explicit saves are canonical and new CLI Dependencies use UUIDv4.
+
+Aggregate UUID uniqueness now spans Actions, Risks, Issues, and Dependencies. Relationships
+validate known endpoints for Dependency `relates_to` adopted entities and Action/Dependency
+`blocks` in either direction, without inference, inverse generation, traversal, or UI.
+Intelligence Contract `1.0.0` is unchanged; dependency title evidence is stable and RFC 6901
+compatible at `/dependenciesById/<UUID>/title`. The read API, executive reporting, and strict
+read-only React workspace now present canonical Dependencies.

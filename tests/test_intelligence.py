@@ -261,11 +261,23 @@ class IntelligenceServiceTests(unittest.TestCase):
             finalize_intelligence_analysis(provider, first_catalog)
 
     def test_evidence_catalog_uses_only_nonempty_bounded_snapshot_values(self):
-        snapshot, catalog = extract_intelligence_evidence({**PROGRAM, "customer": "", "dependencies": ["Vendor", ""]})
-        self.assertEqual(snapshot["dependencies"], ["Vendor", ""])
-        self.assertIn("/dependencies/0", catalog)
-        self.assertNotIn("/dependencies/1", catalog)
+        dependency = {"object_id": "66666666-6666-4666-8666-666666666666", "title": "Vendor"}
+        snapshot, catalog = extract_intelligence_evidence({**PROGRAM, "customer": "", "dependencies": [dependency]})
+        self.assertEqual(snapshot["dependenciesById"][dependency["object_id"]]["title"], "Vendor")
+        self.assertIn(f"/dependenciesById/{dependency['object_id']}/title", catalog)
         self.assertNotIn("/customer", catalog)
+
+    def test_dependency_evidence_is_stable_when_array_reorders_and_catalogued(self):
+        first = {"object_id": "66666666-6666-4666-8666-666666666666", "title": "Vendor circuit"}
+        second = {"object_id": "77777777-7777-4777-8777-777777777777", "title": "Customer approval"}
+        snapshot, catalog = extract_intelligence_evidence({**PROGRAM, "dependencies": [first, second]})
+        reordered, reordered_catalog = extract_intelligence_evidence({**PROGRAM, "dependencies": [second, first]})
+        pointer = f"/dependenciesById/{first['object_id']}/title"
+        self.assertEqual(snapshot["dependenciesById"][first["object_id"]], reordered["dependenciesById"][first["object_id"]])
+        self.assertIn(pointer, catalog)
+        self.assertIn(pointer, reordered_catalog)
+        provider = deepcopy(PROVIDER_RESULT); provider["findings"][1]["evidence_refs"] = [pointer]
+        self.assertEqual(finalize_intelligence_analysis(provider, catalog)["findings"][1]["evidence_refs"], [pointer])
 
     def test_canonical_action_preserves_contract_v1_bounded_description(self):
         canonical = {

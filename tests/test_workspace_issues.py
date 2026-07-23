@@ -20,6 +20,7 @@ from schema import apply_compatibility_defaults
 from workspace import (
     add_action,
     add_decision,
+    add_dependency,
     add_issue,
     add_risk,
     close_issue,
@@ -87,6 +88,9 @@ class WorkspaceIssueHelperTests(unittest.TestCase):
                 with patch("builtins.input", return_value="Action description"):
                     add_action(program)
 
+                with patch("builtins.input", side_effect=["Vendor circuit", "Network Lead", "vendor"]):
+                    add_dependency(program)
+
                 self.assertEqual(program["risks"][0]["object_type"], "risk")
                 self.assertEqual(UUID(program["risks"][0]["object_id"]).version, 4)
                 self.assertEqual(program["issues"][0]["object_type"], "issue")
@@ -100,6 +104,10 @@ class WorkspaceIssueHelperTests(unittest.TestCase):
                     program["next_actions"][0]["object_id"],
                     r"^[0-9a-f-]{36}$",
                 )
+                self.assertEqual(program["dependencies"][0]["object_type"], "dependency")
+                self.assertEqual(UUID(program["dependencies"][0]["object_id"]).version, 4)
+                self.assertEqual(program["dependencies"][0]["status"], "open")
+                self.assertEqual(program["dependencies"][0]["dependency_type"], "vendor")
             finally:
                 memory.DATA_DIR = original_data_dir
 

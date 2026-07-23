@@ -51,6 +51,16 @@ function canonicalIssue(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function canonicalDependency(overrides: Record<string, unknown> = {}) {
+  return {
+    object_id: '66666666-6666-4666-8666-666666666666', object_type: 'dependency', title: 'Vendor circuit',
+    description: null, owner: { display_name: 'Network Lead', stakeholder_id: null }, lifecycle_phase: 'execution',
+    audit: { created_at: null, updated_at: null, source: 'legacy_import' }, status: 'open',
+    dependency_type: 'vendor', depends_on: 'Carrier delivery', external_party: 'Example Carrier',
+    required_by_date: '2026-08-01', impact: 'Cutover blocked', mitigation_plan: 'Escalate weekly', ...overrides,
+  };
+}
+
 const aiIntelligence = {
   schema_version: '1.0.0',
   program_id: 'alpha-program',
@@ -350,6 +360,23 @@ describe('Program workspace', () => {
     renderApp('/programs/alpha-program');
     expect(await screen.findByText('Program could not be loaded')).toBeInTheDocument();
     expect(screen.queryByText('Stored access issue')).not.toBeInTheDocument();
+  });
+
+  it('strictly parses and renders canonical stored dependencies read-only', async () => {
+    mockFetchOnce({ ...alpha, dependencies: [canonicalDependency()] });
+    renderApp('/programs/alpha-program');
+    expect(await screen.findByRole('heading', { level: 2, name: 'Stored Dependencies' })).toBeInTheDocument();
+    expect(screen.getByText('Vendor circuit')).toBeInTheDocument();
+    expect(screen.getByText('Type: vendor')).toBeInTheDocument();
+    expect(screen.getByText('Owner: Network Lead')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /edit dependency/i })).not.toBeInTheDocument();
+  });
+
+  it('rejects malformed canonical stored dependencies', async () => {
+    mockFetchOnce({ ...alpha, dependencies: [canonicalDependency({ required_by_date: 'soon' })] });
+    renderApp('/programs/alpha-program');
+    expect(await screen.findByText('Program could not be loaded')).toBeInTheDocument();
+    expect(screen.queryByText('Vendor circuit')).not.toBeInTheDocument();
   });
 
   it('declares single-column narrow breakpoints for executive status sections', async () => {

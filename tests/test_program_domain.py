@@ -16,6 +16,8 @@ from program_domain import (
     ActionPriority,
     ActionStatus,
     DomainSource,
+    DependencyStatus,
+    DependencyType,
     DomainValidationError,
     LifecyclePhase,
     ProgramRelationship,
@@ -27,9 +29,11 @@ from program_domain import (
     IssueSeverity,
     IssueStatus,
     create_action,
+    create_dependency,
     create_risk,
     create_issue,
     normalize_action,
+    normalize_dependency,
     normalize_program_entities,
     normalize_risk,
     normalize_issue,
@@ -37,6 +41,39 @@ from program_domain import (
 
 
 class ProgramDomainTests(unittest.TestCase):
+    def test_dependency_creation_compatibility_and_aggregate_relationships(self):
+        dependency = create_dependency(
+            "Vendor circuit", owner="Network Lead", dependency_type="vendor",
+            required_by_date="2026-08-01", depends_on="Carrier delivery",
+        )
+        self.assertEqual(UUID(dependency.object_id).version, 4)
+        self.assertEqual(dependency.status, DependencyStatus.OPEN)
+        self.assertEqual(dependency.dependency_type, DependencyType.VENDOR)
+        legacy = {"dependency_id": f"dependency-{dependency.object_id}", "dependency": "Legacy", "owner": "Owner"}
+        original = copy.deepcopy(legacy)
+        normalized = normalize_dependency(legacy, "alpha", 0)
+        self.assertEqual(legacy, original)
+        self.assertEqual(normalized.object_id, dependency.object_id)
+        with self.assertRaisesRegex(DomainValidationError, r"dependencies\[2\]\.required_by_date"):
+            normalize_dependency({"name": "Bad date", "required_by_date": "soon"}, "alpha", 2)
+
+        action = create_action("Unblock vendor")
+        relationship = ProgramRelationship(
+            relationship_id="77777777-7777-4777-8777-777777777777",
+            relationship_type=RelationshipType.BLOCKS,
+            source_object_id=dependency.object_id, target_object_id=action.object_id,
+            created_at=None, source=DomainSource.MANUAL,
+        )
+        actions, _risks, _issues, dependencies, relationships = normalize_program_entities({
+            "program_id": "alpha", "next_actions": [action.to_dict()],
+            "dependencies": [dependency.to_dict()], "relationships": [relationship.to_dict()],
+        })
+        self.assertEqual(dependencies[0]["object_type"], "dependency")
+        self.assertEqual(relationships[0]["source_object_id"], dependency.object_id)
+        duplicate = dependency.to_dict(); duplicate["object_id"] = actions[0]["object_id"]
+        with self.assertRaisesRegex(DomainValidationError, "object_id values must be unique"):
+            normalize_program_entities({"program_id": "alpha", "next_actions": actions, "dependencies": [duplicate]})
+
     def test_issue_creation_validation_and_complete_shape(self):
         with patch("program_domain.utc_timestamp", return_value="2026-07-22T12:00:00+00:00"):
             minimal = create_issue("Vendor access unavailable")
@@ -234,7 +271,7 @@ class ProgramDomainTests(unittest.TestCase):
             source_object_id=action.object_id, target_object_id=risk.object_id,
             created_at=None, source=DomainSource.MANUAL,
         )
-        _actions, _risks, _issues, relationships = normalize_program_entities({
+        _actions, _risks, _issues, _dependencies, relationships = normalize_program_entities({
             "program_id": "alpha", "next_actions": [action.to_dict()],
             "risks": [risk.to_dict()], "relationships": [relationship.to_dict()],
         })
@@ -248,7 +285,7 @@ class ProgramDomainTests(unittest.TestCase):
             "target_object_id": "44444444-4444-4444-8444-444444444444",
             "created_at": None, "source": "manual",
         }
-        _actions, _risks, issues, relationships = normalize_program_entities({
+        _actions, _risks, issues, _dependencies, relationships = normalize_program_entities({
                 "program_id": "alpha", "next_actions": [], "risks": [risk.to_dict()],
                 "issues": [{"issue_id": "issue-44444444-4444-4444-8444-444444444444", "description": "Legacy issue"}],
                 "relationships": [relationship],
@@ -283,7 +320,7 @@ class ProgramDomainTests(unittest.TestCase):
             source=DomainSource.MANUAL,
         )
 
-        actions, risks, issues, relationships = normalize_program_entities({
+        actions, risks, issues, _dependencies, relationships = normalize_program_entities({
             "program_id": "alpha",
             "next_actions": [first.to_dict(), second.to_dict()],
             "relationships": [relationship.to_dict()],

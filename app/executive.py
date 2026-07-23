@@ -44,6 +44,8 @@ Open Risks: {len(program['risks'])}
 
 Open Issues: {len(program['issues'])}
 
+Open Dependencies: {len(program.get('dependencies', []))}
+
 Pending Decisions: {len(program['decisions'])}
 
 Open Actions: {len(program['next_actions'])}

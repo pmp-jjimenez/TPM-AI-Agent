@@ -80,7 +80,7 @@ def bounded_program_snapshot(program):
         "budget": _bounded_value(program.get("budget")),
         "target_go_live": _bounded_value(program.get("target_go_live")),
         "architecture": _bounded_value(program.get("architecture")),
-        "dependencies": _bounded_value(program.get("dependencies")),
+        "dependenciesById": _bounded_dependencies(program.get("dependencies")),
         "governance": _bounded_value(program.get("governance")),
         "risksById": _bounded_risks(program.get("risks")),
         "issuesById": _bounded_issues(program.get("issues")),
@@ -113,6 +113,7 @@ def deterministic_intelligence(program, routing, generated_at, bounded=None, evi
         bounded, evidence_catalog = extract_intelligence_evidence(program)
     risks = bounded["risksById"]
     issues = bounded["issuesById"]
+    dependencies = bounded["dependenciesById"]
     missing = [label for label, field in COMPLETENESS_FIELDS if not _has_value(program.get(field))]
     findings = []
     recommendations = []
@@ -126,6 +127,12 @@ def deterministic_intelligence(program, routing, generated_at, bounded=None, evi
         findings.append({
             "category": "fact", "statement": f"A program issue is recorded: {issue['title']}",
             "confidence": "High", "evidence_refs": [f"/issuesById/{_pointer_segment(object_id)}/title"],
+        })
+    for object_id, dependency in dependencies.items():
+        findings.append({
+            "category": "dependency", "statement": dependency["title"],
+            "confidence": "High",
+            "evidence_refs": [f"/dependenciesById/{_pointer_segment(object_id)}/title"],
         })
     missing_indexes = {}
     for label, field in COMPLETENESS_FIELDS:
@@ -266,6 +273,20 @@ def _bounded_issues(items):
             result[object_id] = {"title": title[:500]}
         if len(result) == PROGRAM_LIST_LIMIT:
             break
+    return result
+
+
+def _bounded_dependencies(items):
+    result = {}
+    for item in items if isinstance(items, list) else []:
+        if len(result) >= PROGRAM_LIST_LIMIT:
+            break
+        if not isinstance(item, dict):
+            continue
+        object_id = _text(item.get("object_id"))
+        title = _text(item.get("title"))[:500]
+        if object_id and title:
+            result[object_id] = {"title": title}
     return result
 
 

@@ -9,12 +9,12 @@ export interface ProgramRecord {
   milestones?: unknown[];
   risks?: ProgramRisk[];
   issues?: ProgramIssue[];
+  dependencies?: ProgramDependency[];
   next_actions?: ProgramAction[];
   sponsor?: unknown;
   budget?: unknown;
   target_go_live?: unknown;
   architecture?: unknown;
-  dependencies?: unknown;
   governance?: unknown;
   meeting_history?: unknown[];
   metadata?: {
@@ -86,6 +86,26 @@ export interface ProgramIssue {
   root_cause: string | null;
 }
 
+export type ProgramDependencyStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
+export type ProgramDependencyType = 'internal' | 'external' | 'vendor' | 'customer' | 'technical' | 'business';
+
+export interface ProgramDependency {
+  object_id: string;
+  object_type: 'dependency';
+  title: string;
+  description: string | null;
+  owner: { display_name: string; stakeholder_id: string | null } | null;
+  lifecycle_phase: 'discovery' | 'initiation' | 'planning' | 'execution' | 'readiness_go_live' | 'transition_handoff' | 'operations_closure' | null;
+  audit: { created_at: string | null; updated_at: string | null; source: 'manual' | 'cli' | 'sow_analysis' | 'legacy_import' | 'api' };
+  status: ProgramDependencyStatus;
+  dependency_type: ProgramDependencyType;
+  depends_on: string | null;
+  external_party: string | null;
+  required_by_date: string | null;
+  impact: string | null;
+  mitigation_plan: string | null;
+}
+
 export interface IntelligencePersona { id: string; display_name: string }
 export type IntelligenceConfidence = 'High' | 'Medium' | 'Low';
 export type IntelligencePriority = 'Critical' | 'High' | 'Medium' | 'Low';
@@ -148,6 +168,8 @@ export function parseProgram(value: unknown): ProgramRecord | null {
   const risks = parsedRisks ?? undefined;
   const parsedIssues = Array.isArray(record.issues) ? parseArray(record.issues, parseProgramIssue) : undefined;
   if (Array.isArray(record.issues) && !parsedIssues) return null;
+  const parsedDependencies = Array.isArray(record.dependencies) ? parseArray(record.dependencies, parseProgramDependency) : undefined;
+  if (Array.isArray(record.dependencies) && !parsedDependencies) return null;
 
   return {
     ...record,
@@ -161,6 +183,7 @@ export function parseProgram(value: unknown): ProgramRecord | null {
     milestones: Array.isArray(record.milestones) ? record.milestones : undefined,
     risks,
     issues: parsedIssues ?? undefined,
+    dependencies: parsedDependencies ?? undefined,
     next_actions: Array.isArray(record.next_actions) ? parseArray(record.next_actions, parseProgramAction) ?? undefined : undefined,
     meeting_history: Array.isArray(record.meeting_history) ? record.meeting_history : undefined,
     metadata,
@@ -232,6 +255,25 @@ function parseProgramIssue(value: unknown): ProgramIssue | null {
   if (audit.created_at !== null && !isIsoDatetime(audit.created_at)) return null;
   if (audit.updated_at !== null && !isIsoDatetime(audit.updated_at)) return null;
   return record as unknown as ProgramIssue;
+}
+
+function parseProgramDependency(value: unknown): ProgramDependency | null {
+  const record = objectRecord(value);
+  const fields = ['object_id', 'object_type', 'title', 'description', 'owner', 'lifecycle_phase', 'audit', 'status', 'dependency_type', 'depends_on', 'external_party', 'required_by_date', 'impact', 'mitigation_plan'];
+  if (!record || !exactKeys(record, fields)) return null;
+  if (typeof record.object_id !== 'string' || !uuidPattern.test(record.object_id) || record.object_type !== 'dependency' || !usableText(record.title)) return null;
+  if (record.description !== null && !usableText(record.description)) return null;
+  if (!['open', 'in_progress', 'resolved', 'closed'].includes(record.status as string)) return null;
+  if (!['internal', 'external', 'vendor', 'customer', 'technical', 'business'].includes(record.dependency_type as string)) return null;
+  for (const field of ['depends_on', 'external_party', 'impact', 'mitigation_plan'] as const) if (record[field] !== null && !usableText(record[field])) return null;
+  if (record.required_by_date !== null && !isIsoDate(record.required_by_date)) return null;
+  if (record.lifecycle_phase !== null && !['discovery', 'initiation', 'planning', 'execution', 'readiness_go_live', 'transition_handoff', 'operations_closure'].includes(record.lifecycle_phase as string)) return null;
+  if (record.owner !== null && !parseOwner(record.owner)) return null;
+  const audit = objectRecord(record.audit);
+  if (!audit || !exactKeys(audit, ['created_at', 'updated_at', 'source']) || !['manual', 'cli', 'sow_analysis', 'legacy_import', 'api'].includes(audit.source as string)) return null;
+  if (audit.created_at !== null && !isIsoDatetime(audit.created_at)) return null;
+  if (audit.updated_at !== null && !isIsoDatetime(audit.updated_at)) return null;
+  return record as unknown as ProgramDependency;
 }
 
 function parseOwner(value: unknown): Record<string, unknown> | null {

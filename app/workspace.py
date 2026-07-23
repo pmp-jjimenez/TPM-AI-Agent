@@ -3,7 +3,7 @@ from datetime import datetime
 from memory import load_program, save_program
 from executive import generate_executive_report
 from schema import generate_item_id
-from program_domain import create_action, create_issue, create_risk, utc_timestamp
+from program_domain import create_action, create_dependency, create_issue, create_risk, utc_timestamp
 
 
 def show_summary(program):
@@ -16,6 +16,7 @@ def show_summary(program):
     print(f"Confidence : {program['confidence']}")
     print("\nRisks       :", len(program["risks"]))
     print("Issues      :", len(program["issues"]))
+    print("Dependencies:", len(program["dependencies"]))
     print("Decisions   :", len(program["decisions"]))
     print("Next Actions:", len(program["next_actions"]))
 
@@ -66,6 +67,29 @@ def add_issue(program):
     save_program(program)
     print("\nIssue added successfully.")
     input("\nPress Enter to return to the workspace...")
+
+
+def add_dependency(program):
+    title = input("\nDependency description:\n\n").strip()
+    if not title:
+        print("Dependency cannot be empty.")
+        return
+    owner = input("\nDependency owner:\n\n").strip()
+    if not owner:
+        print("Dependency owner cannot be empty.")
+        return
+    dependency_type = input(
+        "\nDependency type (internal, external, vendor, customer, technical, business):\n\n"
+    ).strip().lower()
+    if dependency_type not in {"internal", "external", "vendor", "customer", "technical", "business"}:
+        print("Invalid dependency type.")
+        return
+    program["dependencies"].append(create_dependency(
+        title, owner=owner, dependency_type=dependency_type,
+        lifecycle_phase=program.get("phase"),
+    ).to_dict())
+    save_program(program)
+    print("\nDependency added successfully.")
 
 
 def get_open_issues(program):
@@ -231,6 +255,7 @@ def open_workspace(program_id):
         print("6. Add Issue")
         print("7. List Open Issues")
         print("8. Close Issue")
+        print("9. Add Dependency")
         print("0. Exit Workspace")
 
         option = input("\nChoose an option:\n\n")
@@ -251,6 +276,8 @@ def open_workspace(program_id):
             list_open_issues(program)
         elif option == "8":
             close_issue(program)
+        elif option == "9":
+            add_dependency(program)
         elif option == "0":
             print("\nExiting workspace.")
             break

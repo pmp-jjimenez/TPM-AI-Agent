@@ -87,6 +87,22 @@ class IssueSeverity(str, Enum):
     CRITICAL = "critical"
 
 
+class DependencyStatus(str, Enum):
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    RESOLVED = "resolved"
+    CLOSED = "closed"
+
+
+class DependencyType(str, Enum):
+    INTERNAL = "internal"
+    EXTERNAL = "external"
+    VENDOR = "vendor"
+    CUSTOMER = "customer"
+    TECHNICAL = "technical"
+    BUSINESS = "business"
+
+
 class RelationshipType(str, Enum):
     RELATES_TO = "relates_to"
     BLOCKS = "blocks"
@@ -272,6 +288,36 @@ class Issue(ProgramEntity):
 
 
 @dataclass(frozen=True)
+class Dependency(ProgramEntity):
+    status: DependencyStatus
+    dependency_type: DependencyType
+    depends_on: Optional[str]
+    external_party: Optional[str]
+    required_by_date: Optional[str]
+    impact: Optional[str]
+    mitigation_plan: Optional[str]
+
+    def __post_init__(self):
+        super().__post_init__()
+        if self.object_type != "dependency":
+            raise DomainValidationError("object_type must be 'dependency'")
+        _optional_text(self.depends_on, "depends_on")
+        _optional_text(self.external_party, "external_party")
+        _optional_date(self.required_by_date, "required_by_date")
+        _optional_text(self.impact, "impact")
+        _optional_text(self.mitigation_plan, "mitigation_plan")
+
+    def to_dict(self):
+        return {
+            **self._base_dict(), "status": self.status.value,
+            "dependency_type": self.dependency_type.value,
+            "depends_on": self.depends_on, "external_party": self.external_party,
+            "required_by_date": self.required_by_date, "impact": self.impact,
+            "mitigation_plan": self.mitigation_plan,
+        }
+
+
+@dataclass(frozen=True)
 class ProgramRelationship:
     relationship_id: str
     relationship_type: RelationshipType
@@ -355,6 +401,21 @@ def create_issue(title, source=DomainSource.CLI, **values):
         impact=values.get("impact"), due_date=values.get("due_date"),
         resolution_summary=values.get("resolution_summary"),
         resolved_at=values.get("resolved_at"), root_cause=values.get("root_cause"),
+    )
+
+
+def create_dependency(title, source=DomainSource.CLI, **values):
+    now = utc_timestamp()
+    return Dependency(
+        object_id=str(uuid4()), object_type="dependency", title=title,
+        description=values.get("description"), owner=_owner(values.get("owner")),
+        lifecycle_phase=_optional_phase(values.get("lifecycle_phase")),
+        audit=AuditMetadata(now, now, _enum(DomainSource, source, "audit.source")),
+        status=_enum(DependencyStatus, values.get("status", DependencyStatus.OPEN), "status"),
+        dependency_type=_enum(DependencyType, values.get("dependency_type"), "dependency_type"),
+        depends_on=values.get("depends_on"), external_party=values.get("external_party"),
+        required_by_date=values.get("required_by_date"), impact=values.get("impact"),
+        mitigation_plan=values.get("mitigation_plan"),
     )
 
 
@@ -529,6 +590,56 @@ def normalize_issue(value, program_id, index):
         raise DomainValidationError(f"{path}: {error}") from error
 
 
+def normalize_dependency(value, program_id, index):
+    """Normalize one legacy or canonical Dependency without mutating its source."""
+    path = f"dependencies[{index}]"
+    if isinstance(value, str):
+        record = {"title": value}
+    elif isinstance(value, dict):
+        record = dict(value)
+    else:
+        raise DomainValidationError(f"{path} must be a string or object")
+    title = _first_text(record, "title", "dependency", "description", "name")
+    if not title:
+        raise DomainValidationError(f"{path} must contain non-empty dependency text")
+    object_id = _legacy_dependency_object_id(record, program_id, index, value)
+    canonical = "object_id" in record or record.get("object_type") == "dependency"
+    if canonical:
+        _exact_fields(record, {
+            "object_id", "object_type", "title", "description", "owner",
+            "lifecycle_phase", "audit", "status", "dependency_type", "depends_on",
+            "external_party", "required_by_date", "impact", "mitigation_plan",
+        }, path)
+        if record.get("object_type") != "dependency":
+            raise DomainValidationError(f"{path}.object_type must be 'dependency'")
+    audit_value = record.get("audit") if canonical else None
+    audit = _audit(audit_value, f"{path}.audit") if audit_value is not None else AuditMetadata(
+        None, None, _legacy_source(record.get("source"))
+    )
+    required_by_date = _clean_optional(record.get("required_by_date"))
+    _optional_date(required_by_date, f"{path}.required_by_date")
+    try:
+        return Dependency(
+            object_id=object_id, object_type="dependency", title=title,
+            description=_clean_optional(record.get("description")) if canonical else None,
+            owner=_owner(record.get("owner"), f"{path}.owner"),
+            lifecycle_phase=_optional_phase(record.get("lifecycle_phase"), f"{path}.lifecycle_phase"),
+            audit=audit,
+            status=_legacy_dependency_status(record.get("status", "open"), f"{path}.status"),
+            dependency_type=_enum(DependencyType, record.get("dependency_type", "internal"), f"{path}.dependency_type"),
+            depends_on=_clean_optional(record.get("depends_on")),
+            external_party=_clean_optional(record.get("external_party")),
+            required_by_date=required_by_date,
+            impact=_clean_optional(record.get("impact")),
+            mitigation_plan=_clean_optional(record.get("mitigation_plan")),
+        )
+    except DomainValidationError as error:
+        message = str(error)
+        if message.startswith(f"{path}."):
+            raise
+        raise DomainValidationError(f"{path}: {error}") from error
+
+
 def normalize_relationship(value, index):
     path = f"relationships[{index}]"
     if not isinstance(value, dict):
@@ -565,15 +676,20 @@ def normalize_program_entities(program):
         normalize_issue(value, program_id, index)
         for index, value in enumerate(program.get("issues", []))
     ]
+    dependencies = [
+        normalize_dependency(value, program_id, index)
+        for index, value in enumerate(program.get("dependencies", []))
+    ]
     relationships = [
         normalize_relationship(value, index)
         for index, value in enumerate(program.get("relationships", []))
     ]
-    validate_object_identity([*actions, *risks, *issues], relationships)
+    validate_object_identity([*actions, *risks, *issues, *dependencies], relationships)
     return (
         [item.to_dict() for item in actions],
         [item.to_dict() for item in risks],
         [item.to_dict() for item in issues],
+        [item.to_dict() for item in dependencies],
         [item.to_dict() for item in relationships],
     )
 
@@ -600,8 +716,14 @@ def validate_object_identity(entities, relationships):
             RelationshipType.RESOLVES: ("action", "issue"),
             RelationshipType.REALIZED_AS: ("risk", "issue"),
             RelationshipType.RESULTS_FROM: ("issue", "risk"),
+            RelationshipType.BLOCKS: (("action", "dependency"), ("dependency", "action")),
         }
-        if relationship.relationship_type in required_types and (source_type, target_type) != required_types[relationship.relationship_type]:
+        allowed = required_types.get(relationship.relationship_type)
+        if allowed and isinstance(allowed[0], tuple) and (source_type, target_type) not in allowed:
+            raise DomainValidationError(
+                "relationship blocks must be action -> dependency or dependency -> action"
+            )
+        if allowed and not isinstance(allowed[0], tuple) and (source_type, target_type) != allowed:
             expected = required_types[relationship.relationship_type]
             raise DomainValidationError(
                 f"relationship {relationship.relationship_type.value} must be {expected[0]} -> {expected[1]}"
@@ -657,6 +779,19 @@ def _legacy_issue_object_id(record, program_id, index, original):
     return str(uuid5(LEGACY_IMPORT_NAMESPACE, f"{program_id}|issues|{index}|{payload}"))
 
 
+def _legacy_dependency_object_id(record, program_id, index, original):
+    candidate = record.get("object_id") or record.get("dependency_id")
+    if candidate:
+        try:
+            return str(UUID(str(candidate).removeprefix("dependency-")))
+        except (ValueError, AttributeError) as error:
+            raise DomainValidationError(
+                f"dependencies[{index}].object_id must be a UUID or dependency-UUID"
+            ) from error
+    payload = json.dumps(original, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return str(uuid5(LEGACY_IMPORT_NAMESPACE, f"{program_id}|dependencies|{index}|{payload}"))
+
+
 def _legacy_status(value, path):
     if isinstance(value, ActionStatus):
         return value
@@ -707,6 +842,18 @@ def _legacy_issue_status(value, path):
     try:
         return aliases[normalized]
     except KeyError as error:
+        raise DomainValidationError(f"{path} is unsupported") from error
+
+
+def _legacy_dependency_status(value, path):
+    if isinstance(value, DependencyStatus):
+        return value
+    if not isinstance(value, str):
+        raise DomainValidationError(f"{path} is unsupported")
+    normalized = "_".join(value.strip().lower().replace("_", " ").split())
+    try:
+        return DependencyStatus(normalized)
+    except ValueError as error:
         raise DomainValidationError(f"{path} is unsupported") from error
 
 

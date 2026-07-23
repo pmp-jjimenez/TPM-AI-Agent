@@ -11,7 +11,7 @@ from backend.api.main import app
 
 
 CONTROLLED_PROGRAM = {
-    "schema_version": "1.3.0",
+    "schema_version": "1.4.0",
     "program_id": "controlled-program",
     "program_name": "Controlled Program",
     "description": "Program fixture isolated from repository persistence.",
@@ -36,6 +36,7 @@ CONTROLLED_PROGRAM = {
         "status": "open", "severity": None, "impact": None, "due_date": None,
         "resolution_summary": None, "resolved_at": None, "root_cause": None,
     }],
+    "dependencies": [],
     "decisions": [],
     "next_actions": [{
         "object_id": "11111111-1111-4111-8111-111111111111",
