@@ -2,6 +2,17 @@
 
 This document distinguishes the current repository architecture from future product boundaries. Future components should not be interpreted as implemented behavior.
 
+## Release Context
+
+The current product release is **v0.7.0 — Foundation & Experience**. It closes the
+first demonstrable architecture baseline: canonical program entities, local JSON
+persistence, CLI workflows, a read-only FastAPI boundary, and a React enterprise
+application with Command Center and Program Mission Control experiences.
+
+See the canonical [v0.7.0 release document](releases/v0.7.0-foundation-and-experience.md)
+for product scope and limitations. The next product version is **v0.8
+Intelligence**, and the next engineering sprint is **DX-1.0 Developer Console**.
+
 ## Product Architecture
 
 TPM Operating System is evolving from a local Python CLI into a production-grade SaaS product through incremental, backward-compatible changes. The repository establishes five durable top-level boundaries:

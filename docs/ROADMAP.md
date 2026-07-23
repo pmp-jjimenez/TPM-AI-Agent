@@ -4,21 +4,25 @@ This roadmap describes product direction without assigning fabricated dates. Ver
 
 ## Current State
 
-The product is a CLI-based TPM assistant with local Markdown knowledge assets and JSON program persistence.
+**v0.7.0 — Foundation & Experience is complete.** It is the first demonstrable
+product release and establishes the canonical program domain, read-only API,
+enterprise Application Shell, Home Command Center, Programs experience, Program
+Mission Control, Product Design System, responsive and accessibility foundations,
+and visual product identity.
 
-Implemented:
+The runtime remains a single-user local development baseline. Mission Control AI
+Assessment is a preview, the web interface is read-only, and there is no production
+deployment. See the canonical [v0.7.0 release document](releases/v0.7.0-foundation-and-experience.md)
+for the delivered scope and complete limitations.
 
-- CLI entry point and routing.
-- New Program flow that creates a program record, builds an AI-ready prompt, loads selected TPM context, calls Gemini, and saves generated prompt and response files.
-- Active Program Workspace flow for viewing summary data and managing risks, issues, decisions, next actions, program health, and executive reports.
-- Issue management with issue description, owner, due date validation, open issue listing, and closure.
-- Markdown Executive Status Report generation.
-- Markdown knowledge assets, playbooks, templates, examples, and tests.
+## Next
 
-Present but not fully implemented:
+- **Next product version:** v0.8 Intelligence.
+- **Next engineering sprint:** DX-1.0 Developer Console.
 
-- CLI placeholders for Major Incident, Executive Review, and Operational Readiness.
-- Markdown knowledge and templates for SOW analysis, incident command, operational readiness, service transition, executive communication, and related TPM workflows.
+v0.8 will build grounded, explainable intelligence capabilities on the v0.7 domain
+and experience foundation. DX-1.0 will first strengthen the local developer
+operating experience and provide a dependable console for inspecting the system.
 
 ## Version 0.1
 

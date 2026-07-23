@@ -4,6 +4,8 @@ This backlog distinguishes completed work, in-progress documentation work, plann
 
 | Epic ID | Epic Name | Objective | Tickets or Capabilities | Current Status | Priority |
 |---|---|---|---|---|---|
+| v0.7.0 | Foundation & Experience | Establish the first demonstrable TPM Operating System product release. | Canonical program domain; read-only API; Application Shell; Home Command Center; Programs experience; Program Mission Control; Product Design System; responsive and accessibility foundations; product identity. | Complete | High |
+| DX-1.0 | Developer Console | Establish the next engineering increment and improve the local developer operating experience before v0.8 intelligence expansion. | Developer-console scope to be defined and delivered without claiming v0.8 product intelligence early. | Next | High |
 | Epic 40 | Program Workspace Issue Management | Improve active program execution by tracking issues with ownership and closure. | Add issues to workspace; capture owner; capture due date; validate due date format; list open issues; close issues; improve return-to-workspace feedback. | Completed | High |
 | Epic 41 | Engineering Documentation Foundation | Establish core engineering and product documentation for maintainability and planning. | Product vision; roadmap; backlog; architecture; release history. | Completed | High |
 | Epic 42 | AI Expert Council Foundation | Document specialized expert personas and define how a future council should support TPM judgment. | Create cloud architect, incident commander, executive advisor, delivery manager, operations manager, change manager, security advisor, and customer success advisor personas; document council purpose, invocation, conflict handling, and current implementation boundary. | Completed | High |
@@ -20,8 +22,8 @@ This backlog distinguishes completed work, in-progress documentation work, plann
 | US-58.1 | Decision Record Foundation v1 | Adopt stored decisions as the next canonical Program entity without redesigning existing entities. | Canonical DecisionRecord; controlled status; UUID and legacy normalization; aggregate identity; explicit relates-to validation for RAID and Actions; stable evidence; strict read-only frontend presentation. | Completed | High |
 | TBD | Program Data Foundation Follow-up | Continue safe evolution after Action adoption. | Adopt one explicit entity at a time; improve malformed JSON handling; add artifact references and data-integrity checks without parallel runtime models. | Planned | High |
 | TBD | Executive Intelligence | Improve executive-facing analysis and decision support. | Business impact summaries; decisions required; confidence rationale; trend awareness; executive-ready recommendations; status report improvements. | Planned | High |
-| TBD | Automated Testing | Create confidence that CLI flows, data persistence, and generated artifacts do not regress. | Unit tests for memory, workspace, router behavior, prompt building, executive report generation, and edge cases; scenario-based regression tests. | Planned | High |
-| TBD | Web Interface | Provide a browser-based program workspace. | Program dashboard; RAID views; issue management; decisions; actions; reports; artifact access; responsive UI. | Planned | Medium |
+| TBD | Automated Testing Expansion | Extend the established automated quality baseline. | Additional unit, integration, accessibility, and scenario-based regression coverage as product capabilities expand. | Planned | High |
+| TBD | Web Editing Workflows | Extend the read-only browser foundation with controlled program mutations. | Create and edit flows; validation; approvals where appropriate; authenticated mutation API. | Planned | Medium |
 | TBD | SOW Analysis Expansion | Extend the Sprint 53 structured program foundation. | Persist an explicitly reviewed analysis artifact; richer scope/deliverable views; milestone and dependency mapping; optional future OCR evaluation. | Planned | High |
 | TBD | Major Incident Mode | Support structured incident coordination and communications. | Incident intake; severity assessment; impact summary; action tracker; owner tracking; executive updates; ETA discipline; RCA support. | Planned | High |
 | TBD | Operational Readiness | Help TPMs validate supportability before go-live or transition. | ORR checklist; support readiness; monitoring readiness; KT tracking; runbook verification; service acceptance; hypercare and handoff. | Planned | High |
@@ -33,6 +35,10 @@ This backlog distinguishes completed work, in-progress documentation work, plann
 
 ## Notes
 
+- v0.7.0 Foundation & Experience is complete. Its canonical release record is
+  [docs/releases/v0.7.0-foundation-and-experience.md](releases/v0.7.0-foundation-and-experience.md).
+- v0.8 Intelligence is the next product version; DX-1.0 Developer Console is the
+  next engineering sprint.
 - Epic 40 is marked completed based on Git history and current workspace behavior.
 - Epic 41 and Epic 42 are documentation foundation epics completed by this controlled change set.
 - Sprint 51 implements routing only. It does not invoke personas, run multiple AI calls, or change CLI behavior.

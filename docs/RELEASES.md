@@ -2,6 +2,21 @@
 
 This release history is based on the actual Git history available in the repository. Some commits do not carry explicit sprint numbers. Where exact sprint mapping is uncertain, that uncertainty is stated rather than inferred.
 
+## v0.7.0 — Foundation & Experience
+
+Status: Complete.
+
+This is the first demonstrable TPM Operating System product release. It establishes
+the canonical program domain, read-only API, enterprise Application Shell, Home
+Command Center, Programs experience, Program Mission Control, Product Design System,
+responsive and accessibility foundations, and Enterprise Program Intelligence
+identity.
+
+See the canonical [v0.7.0 release document](releases/v0.7.0-foundation-and-experience.md)
+for delivered scope, validation baseline, known limitations, demonstration flow, and
+release metadata. The next product version is **v0.8 Intelligence**; the next
+engineering sprint is **DX-1.0 Developer Console**.
+
 ## Product Design System v1 — UX-1.2.5
 
 Established a centralized Material UI design system for the frontend with a restrained
