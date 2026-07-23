@@ -84,6 +84,7 @@ def bounded_program_snapshot(program):
         "governance": _bounded_value(program.get("governance")),
         "risksById": _bounded_risks(program.get("risks")),
         "issuesById": _bounded_issues(program.get("issues")),
+        "decisionsById": _bounded_decisions(program.get("decisions")),
         "next_actions": _descriptions(program.get("next_actions")),
     }
 
@@ -114,6 +115,7 @@ def deterministic_intelligence(program, routing, generated_at, bounded=None, evi
     risks = bounded["risksById"]
     issues = bounded["issuesById"]
     dependencies = bounded["dependenciesById"]
+    stored_decisions = bounded["decisionsById"]
     missing = [label for label, field in COMPLETENESS_FIELDS if not _has_value(program.get(field))]
     findings = []
     recommendations = []
@@ -133,6 +135,12 @@ def deterministic_intelligence(program, routing, generated_at, bounded=None, evi
             "category": "dependency", "statement": dependency["title"],
             "confidence": "High",
             "evidence_refs": [f"/dependenciesById/{_pointer_segment(object_id)}/title"],
+        })
+    for object_id, decision in stored_decisions.items():
+        findings.append({
+            "category": "fact", "statement": f"A program decision is recorded: {decision['title']}",
+            "confidence": "High",
+            "evidence_refs": [f"/decisionsById/{_pointer_segment(object_id)}/title"],
         })
     missing_indexes = {}
     for label, field in COMPLETENESS_FIELDS:
@@ -277,6 +285,20 @@ def _bounded_issues(items):
 
 
 def _bounded_dependencies(items):
+    result = {}
+    for item in items if isinstance(items, list) else []:
+        if len(result) >= PROGRAM_LIST_LIMIT:
+            break
+        if not isinstance(item, dict):
+            continue
+        object_id = _text(item.get("object_id"))
+        title = _text(item.get("title"))[:500]
+        if object_id and title:
+            result[object_id] = {"title": title}
+    return result
+
+
+def _bounded_decisions(items):
     result = {}
     for item in items if isinstance(items, list) else []:
         if len(result) >= PROGRAM_LIST_LIMIT:

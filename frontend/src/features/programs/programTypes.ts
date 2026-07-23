@@ -10,6 +10,7 @@ export interface ProgramRecord {
   risks?: ProgramRisk[];
   issues?: ProgramIssue[];
   dependencies?: ProgramDependency[];
+  decisions?: ProgramDecisionRecord[];
   next_actions?: ProgramAction[];
   sponsor?: unknown;
   budget?: unknown;
@@ -106,6 +107,24 @@ export interface ProgramDependency {
   mitigation_plan: string | null;
 }
 
+export type ProgramDecisionStatus = 'proposed' | 'approved' | 'superseded' | 'rejected';
+
+export interface ProgramDecisionRecord {
+  object_id: string;
+  object_type: 'decision_record';
+  title: string;
+  decision: string | null;
+  rationale: string | null;
+  alternatives_considered: string[];
+  owner: { display_name: string; stakeholder_id: string | null } | null;
+  status: ProgramDecisionStatus;
+  decision_date: string | null;
+  review_date: string | null;
+  impact: string | null;
+  audit: { created_at: string | null; updated_at: string | null; source: 'manual' | 'cli' | 'sow_analysis' | 'legacy_import' | 'api' };
+  lifecycle_phase: 'discovery' | 'initiation' | 'planning' | 'execution' | 'readiness_go_live' | 'transition_handoff' | 'operations_closure' | null;
+}
+
 export interface IntelligencePersona { id: string; display_name: string }
 export type IntelligenceConfidence = 'High' | 'Medium' | 'Low';
 export type IntelligencePriority = 'Critical' | 'High' | 'Medium' | 'Low';
@@ -170,6 +189,8 @@ export function parseProgram(value: unknown): ProgramRecord | null {
   if (Array.isArray(record.issues) && !parsedIssues) return null;
   const parsedDependencies = Array.isArray(record.dependencies) ? parseArray(record.dependencies, parseProgramDependency) : undefined;
   if (Array.isArray(record.dependencies) && !parsedDependencies) return null;
+  const parsedDecisions = Array.isArray(record.decisions) ? parseArray(record.decisions, parseProgramDecisionRecord) : undefined;
+  if (Array.isArray(record.decisions) && !parsedDecisions) return null;
 
   return {
     ...record,
@@ -184,6 +205,7 @@ export function parseProgram(value: unknown): ProgramRecord | null {
     risks,
     issues: parsedIssues ?? undefined,
     dependencies: parsedDependencies ?? undefined,
+    decisions: parsedDecisions ?? undefined,
     next_actions: Array.isArray(record.next_actions) ? parseArray(record.next_actions, parseProgramAction) ?? undefined : undefined,
     meeting_history: Array.isArray(record.meeting_history) ? record.meeting_history : undefined,
     metadata,
@@ -274,6 +296,26 @@ function parseProgramDependency(value: unknown): ProgramDependency | null {
   if (audit.created_at !== null && !isIsoDatetime(audit.created_at)) return null;
   if (audit.updated_at !== null && !isIsoDatetime(audit.updated_at)) return null;
   return record as unknown as ProgramDependency;
+}
+
+function parseProgramDecisionRecord(value: unknown): ProgramDecisionRecord | null {
+  const record = objectRecord(value);
+  const fields = ['object_id', 'object_type', 'title', 'decision', 'rationale', 'alternatives_considered', 'owner', 'status', 'decision_date', 'review_date', 'impact', 'audit', 'lifecycle_phase'];
+  if (!record || !exactKeys(record, fields)) return null;
+  if (typeof record.object_id !== 'string' || !uuidPattern.test(record.object_id) || record.object_type !== 'decision_record' || !usableText(record.title)) return null;
+  if (!['proposed', 'approved', 'superseded', 'rejected'].includes(record.status as string)) return null;
+  for (const field of ['decision', 'rationale', 'impact'] as const) if (record[field] !== null && !usableText(record[field])) return null;
+  if (!Array.isArray(record.alternatives_considered) || !record.alternatives_considered.every((item) => usableText(item))) return null;
+  if (new Set(record.alternatives_considered).size !== record.alternatives_considered.length) return null;
+  if (record.decision_date !== null && !isIsoDate(record.decision_date)) return null;
+  if (record.review_date !== null && !isIsoDate(record.review_date)) return null;
+  if (record.lifecycle_phase !== null && !['discovery', 'initiation', 'planning', 'execution', 'readiness_go_live', 'transition_handoff', 'operations_closure'].includes(record.lifecycle_phase as string)) return null;
+  if (record.owner !== null && !parseOwner(record.owner)) return null;
+  const audit = objectRecord(record.audit);
+  if (!audit || !exactKeys(audit, ['created_at', 'updated_at', 'source']) || !['manual', 'cli', 'sow_analysis', 'legacy_import', 'api'].includes(audit.source as string)) return null;
+  if (audit.created_at !== null && !isIsoDatetime(audit.created_at)) return null;
+  if (audit.updated_at !== null && !isIsoDatetime(audit.updated_at)) return null;
+  return record as unknown as ProgramDecisionRecord;
 }
 
 function parseOwner(value: unknown): Record<string, unknown> | null {

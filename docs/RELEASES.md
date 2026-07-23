@@ -2,6 +2,25 @@
 
 This release history is based on the actual Git history available in the repository. Some commits do not carry explicit sprint numbers. Where exact sprint mapping is uncertain, that uncertainty is stated rather than inferred.
 
+## Decision Record Foundation v1 — US-58.1
+
+Adopted stored Program decisions as canonical `DecisionRecord` entities using the
+existing `ProgramEntity`, UUID, ownership, lifecycle, audit, compatibility, and
+aggregate-validation foundation. Program Schema `1.5.0` adds the closed proposed,
+approved, superseded, and rejected status vocabulary; decision and rationale text;
+alternatives considered; decision and review dates; and impact.
+
+New DecisionRecords use UUIDv4 identity. Legacy strings, partial dictionaries,
+`decision_id` values, display-case statuses, and string owners normalize without
+mutating the source; missing identity uses deterministic UUIDv5. DecisionRecords
+participate in aggregate identity and may `relates_to` Risk, Issue, Dependency, or
+Action through explicitly stored relationships. No relationship or decision reasoning
+is inferred.
+
+Workspace Intelligence remains Contract `1.0.0` and projects stable evidence at
+`/decisionsById/<UUID>/title`. The API transports canonical decisions and the workspace
+strictly validates and renders a read-only Decision Records section with no editing UI.
+
 ## RAID Adoption v1 — Risk Adoption — US-57.1
 
 Adopted stored Program risks as framework-neutral `Risk` entities using the existing

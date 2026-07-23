@@ -262,7 +262,7 @@ training, background jobs, retries, or deployment behavior.
 
 ## Program Domain Foundation
 
-Program Schema `1.4.0` evolves the implemented portion of the approved
+Program Schema `1.5.0` evolves the implemented portion of the approved
 Program Domain Model in `app/program_domain.py`. The module is framework-neutral:
 it imports no FastAPI, transport model, SQLAlchemy, React, or provider code.
 
@@ -274,6 +274,10 @@ acceptance fields. `Issue` adds controlled open, in-progress, blocked, resolved,
 closed states, optional severity and impact, due date, root cause, and closure metadata.
 `Dependency` adds controlled status and type plus optional dependency target, external
 party, required-by date, impact, and mitigation plan.
+`DecisionRecord` is the next canonical entity. It adds controlled proposed, approved,
+superseded, and rejected status; decision and rationale text; alternatives considered;
+decision and review dates; and impact. Its canonical JSON uses `object_type`
+`decision_record` and reuses owner, lifecycle, audit, and UUID identity.
 
 New CLI and SOW Actions receive UUIDv4 identities. Compatibility loading accepts
 legacy strings, dictionaries, and `action_id` values and produces the same
@@ -296,22 +300,26 @@ requires a resolution summary, and records `resolved_at` plus `audit.updated_at`
 Dependency compatibility accepts strings and dictionaries, title/dependency/description/name
 aliases, `dependency_id`, bare or prefixed UUIDs, owner strings, and missing owner or
 required-by date. Missing identity uses deterministic UUIDv5; CLI creation requires title,
-owner, and type and uses UUIDv4. Aggregate identity is unique across Actions, Risks, Issues,
-and Dependencies.
+owner, and type and uses UUIDv4. DecisionRecord compatibility accepts strings and partial
+dictionaries, `decision_id`, text/date aliases, display-case statuses, and string owners.
+Missing identity uses deterministic UUIDv5; new DecisionRecords use UUIDv4. Aggregate identity is unique across Actions, Risks, Issues,
+Dependencies, and DecisionRecords.
 
 Programs also contain a closed `relationships` collection of typed source/target
 references. Aggregate validation enforces unique object and relationship IDs,
 known canonical endpoints, no self-reference, and no duplicate typed edges. Typed rules
 permit Action `resolves` Issue, Risk `realized_as` Issue, Issue `results_from` Risk, and
 Dependency `relates_to` adopted entities plus Action/Dependency `blocks` in either direction.
-No inverse is inferred and no relationship UI or
+DecisionRecord `relates_to` edges may connect from a DecisionRecord to a Risk, Issue,
+Dependency, or Action. No inverse is inferred and no relationship UI or
 traversal is added.
 
-The Intelligence Contract remains `1.0.0`. Bounded extraction reads canonical Action
-Risk, and Issue titles without adding public fields. Risk evidence is internally object-keyed
+The Intelligence Contract remains `1.0.0`. Bounded extraction reads canonical Action,
+Risk, Issue, Dependency, and DecisionRecord titles without adding public fields. Risk evidence is internally object-keyed
 as `/risksById/<UUID>/title`; this RFC 6901 pointer remains stable when the persisted
 Risk array is reordered. Issue evidence follows `/issuesById/<UUID>/title` and has the
-same stability. Dependency evidence follows `/dependenciesById/<UUID>/title`; all are
+same stability. Dependency evidence follows `/dependenciesById/<UUID>/title` with the
+same stability. DecisionRecord evidence follows `/decisionsById/<UUID>/title`. All are
 provider-catalog enforced and stable across collection reordering. Public response keys, semantic IDs, strict parsing, and
 all-or-fallback behavior remain unchanged.
 
@@ -346,7 +354,7 @@ This layer is intentionally independent of Gemini. It does not call an AI model,
 
 - The browser supports read-only program browsing and workspace views; the CLI remains the interface for mutations.
 - Local JSON files are the only program persistence mechanism.
-- No schema migration framework; compatibility normalization upgrades legacy Actions, Risks, and Issues in memory and writes canonical data only on explicit save.
+- No schema migration framework; compatibility normalization upgrades legacy Actions, Risks, Issues, Dependencies, and DecisionRecords in memory and writes canonical data only on explicit save.
 - Automated coverage uses `unittest`, but there is no separate CI configuration in this repository.
 - The web interface calls the available read-only backend API but does not provide mutations.
 - No implemented Docker runtime.

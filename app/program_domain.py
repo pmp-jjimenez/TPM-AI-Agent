@@ -103,6 +103,13 @@ class DependencyType(str, Enum):
     BUSINESS = "business"
 
 
+class DecisionStatus(str, Enum):
+    PROPOSED = "proposed"
+    APPROVED = "approved"
+    SUPERSEDED = "superseded"
+    REJECTED = "rejected"
+
+
 class RelationshipType(str, Enum):
     RELATES_TO = "relates_to"
     BLOCKS = "blocks"
@@ -318,6 +325,42 @@ class Dependency(ProgramEntity):
 
 
 @dataclass(frozen=True)
+class DecisionRecord(ProgramEntity):
+    decision: Optional[str]
+    rationale: Optional[str]
+    alternatives_considered: tuple[str, ...]
+    status: DecisionStatus
+    decision_date: Optional[str]
+    review_date: Optional[str]
+    impact: Optional[str]
+
+    def __post_init__(self):
+        super().__post_init__()
+        if self.object_type != "decision_record":
+            raise DomainValidationError("object_type must be 'decision_record'")
+        _optional_text(self.decision, "decision")
+        _optional_text(self.rationale, "rationale")
+        _text_tuple(self.alternatives_considered, "alternatives_considered")
+        _optional_date(self.decision_date, "decision_date")
+        _optional_date(self.review_date, "review_date")
+        _optional_text(self.impact, "impact")
+
+    def to_dict(self):
+        base = self._base_dict()
+        base.pop("description")
+        return {
+            **base,
+            "decision": self.decision,
+            "rationale": self.rationale,
+            "alternatives_considered": list(self.alternatives_considered),
+            "status": self.status.value,
+            "decision_date": self.decision_date,
+            "review_date": self.review_date,
+            "impact": self.impact,
+        }
+
+
+@dataclass(frozen=True)
 class ProgramRelationship:
     relationship_id: str
     relationship_type: RelationshipType
@@ -416,6 +459,23 @@ def create_dependency(title, source=DomainSource.CLI, **values):
         depends_on=values.get("depends_on"), external_party=values.get("external_party"),
         required_by_date=values.get("required_by_date"), impact=values.get("impact"),
         mitigation_plan=values.get("mitigation_plan"),
+    )
+
+
+def create_decision_record(title, source=DomainSource.CLI, **values):
+    now = utc_timestamp()
+    return DecisionRecord(
+        object_id=str(uuid4()), object_type="decision_record", title=title,
+        description=None, owner=_owner(values.get("owner")),
+        lifecycle_phase=_optional_phase(values.get("lifecycle_phase")),
+        audit=AuditMetadata(now, now, _enum(DomainSource, source, "audit.source")),
+        decision=_clean_optional(values.get("decision")),
+        rationale=_clean_optional(values.get("rationale")),
+        alternatives_considered=_text_tuple(values.get("alternatives_considered", ()), "alternatives_considered"),
+        status=_enum(DecisionStatus, values.get("status", DecisionStatus.PROPOSED), "status"),
+        decision_date=_clean_optional(values.get("decision_date")),
+        review_date=_clean_optional(values.get("review_date")),
+        impact=_clean_optional(values.get("impact")),
     )
 
 
@@ -640,6 +700,52 @@ def normalize_dependency(value, program_id, index):
         raise DomainValidationError(f"{path}: {error}") from error
 
 
+def normalize_decision_record(value, program_id, index):
+    """Normalize one legacy or canonical DecisionRecord without mutating its source."""
+    path = f"decisions[{index}]"
+    if isinstance(value, str):
+        record = {"title": value, "decision": value}
+    elif isinstance(value, dict):
+        record = dict(value)
+    else:
+        raise DomainValidationError(f"{path} must be a string or object")
+    title = _first_text(record, "title", "decision", "description", "name")
+    if not title:
+        raise DomainValidationError(f"{path} must contain non-empty decision text")
+    object_id = _legacy_decision_object_id(record, program_id, index, value)
+    canonical = "object_id" in record or record.get("object_type") == "decision_record"
+    if canonical:
+        _exact_fields(record, {
+            "object_id", "object_type", "title", "decision", "rationale",
+            "alternatives_considered", "owner", "status", "decision_date",
+            "review_date", "impact", "audit", "lifecycle_phase",
+        }, path)
+        if record.get("object_type") != "decision_record":
+            raise DomainValidationError(f"{path}.object_type must be 'decision_record'")
+    audit_value = record.get("audit") if canonical else None
+    audit = _audit(audit_value, f"{path}.audit") if audit_value is not None else AuditMetadata(
+        None, None, _legacy_source(record.get("source"))
+    )
+    try:
+        return DecisionRecord(
+            object_id=object_id, object_type="decision_record", title=title,
+            description=None, owner=_owner(record.get("owner"), f"{path}.owner"),
+            lifecycle_phase=_optional_phase(record.get("lifecycle_phase"), f"{path}.lifecycle_phase"),
+            audit=audit, decision=_clean_optional(record.get("decision", title)),
+            rationale=_clean_optional(record.get("rationale")),
+            alternatives_considered=_text_tuple(record.get("alternatives_considered", ()), f"{path}.alternatives_considered"),
+            status=_legacy_decision_status(record.get("status", "proposed"), f"{path}.status"),
+            decision_date=_clean_optional(record.get("decision_date", record.get("date"))),
+            review_date=_clean_optional(record.get("review_date")),
+            impact=_clean_optional(record.get("impact")),
+        )
+    except DomainValidationError as error:
+        message = str(error)
+        if message.startswith(f"{path}."):
+            raise
+        raise DomainValidationError(f"{path}: {error}") from error
+
+
 def normalize_relationship(value, index):
     path = f"relationships[{index}]"
     if not isinstance(value, dict):
@@ -680,16 +786,21 @@ def normalize_program_entities(program):
         normalize_dependency(value, program_id, index)
         for index, value in enumerate(program.get("dependencies", []))
     ]
+    decisions = [
+        normalize_decision_record(value, program_id, index)
+        for index, value in enumerate(program.get("decisions", []))
+    ]
     relationships = [
         normalize_relationship(value, index)
         for index, value in enumerate(program.get("relationships", []))
     ]
-    validate_object_identity([*actions, *risks, *issues, *dependencies], relationships)
+    validate_object_identity([*actions, *risks, *issues, *dependencies, *decisions], relationships)
     return (
         [item.to_dict() for item in actions],
         [item.to_dict() for item in risks],
         [item.to_dict() for item in issues],
         [item.to_dict() for item in dependencies],
+        [item.to_dict() for item in decisions],
         [item.to_dict() for item in relationships],
     )
 
@@ -712,6 +823,11 @@ def validate_object_identity(entities, relationships):
             )
         source_type = entity_types[relationship.source_object_id]
         target_type = entity_types[relationship.target_object_id]
+        if relationship.relationship_type == RelationshipType.RELATES_TO and "decision_record" in (source_type, target_type):
+            if source_type != "decision_record" or target_type not in {"risk", "issue", "dependency", "action"}:
+                raise DomainValidationError(
+                    "decision_record relates_to must be DecisionRecord -> Risk, Issue, Dependency, or Action"
+                )
         required_types = {
             RelationshipType.RESOLVES: ("action", "issue"),
             RelationshipType.REALIZED_AS: ("risk", "issue"),
@@ -792,6 +908,19 @@ def _legacy_dependency_object_id(record, program_id, index, original):
     return str(uuid5(LEGACY_IMPORT_NAMESPACE, f"{program_id}|dependencies|{index}|{payload}"))
 
 
+def _legacy_decision_object_id(record, program_id, index, original):
+    candidate = record.get("object_id") or record.get("decision_id")
+    if candidate:
+        try:
+            return str(UUID(str(candidate).removeprefix("decision-")))
+        except (ValueError, AttributeError) as error:
+            raise DomainValidationError(
+                f"decisions[{index}].object_id must be a UUID or decision-UUID"
+            ) from error
+    payload = json.dumps(original, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return str(uuid5(LEGACY_IMPORT_NAMESPACE, f"{program_id}|decisions|{index}|{payload}"))
+
+
 def _legacy_status(value, path):
     if isinstance(value, ActionStatus):
         return value
@@ -853,6 +982,21 @@ def _legacy_dependency_status(value, path):
     normalized = "_".join(value.strip().lower().replace("_", " ").split())
     try:
         return DependencyStatus(normalized)
+    except ValueError as error:
+        raise DomainValidationError(f"{path} is unsupported") from error
+
+
+def _legacy_decision_status(value, path):
+    if isinstance(value, DecisionStatus):
+        return value
+    if not isinstance(value, str):
+        raise DomainValidationError(f"{path} is unsupported")
+    normalized = "_".join(value.strip().lower().replace("_", " ").split())
+    aliases = {"open": DecisionStatus.PROPOSED, "closed": DecisionStatus.APPROVED}
+    if normalized in aliases:
+        return aliases[normalized]
+    try:
+        return DecisionStatus(normalized)
     except ValueError as error:
         raise DomainValidationError(f"{path} is unsupported") from error
 
@@ -937,6 +1081,19 @@ def _first_text(record, *fields):
 
 def _clean_optional(value):
     return value.strip() if isinstance(value, str) and value.strip() else None if value is None or value == "" else value
+
+
+def _text_tuple(value, path):
+    if not isinstance(value, (list, tuple)):
+        raise DomainValidationError(f"{path} must be a list of non-empty strings")
+    normalized = []
+    for item in value:
+        if not isinstance(item, str) or not item.strip():
+            raise DomainValidationError(f"{path} must be a list of non-empty strings")
+        normalized.append(item.strip())
+    if len(set(normalized)) != len(normalized):
+        raise DomainValidationError(f"{path} must not contain duplicates")
+    return tuple(normalized)
 
 
 def _required_text(value, path):

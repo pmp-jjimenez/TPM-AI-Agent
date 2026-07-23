@@ -28,6 +28,8 @@ RISK_ID = "22222222-2222-4222-8222-222222222222"
 RISK_POINTER = f"/risksById/{RISK_ID}/title"
 ISSUE_ID = "44444444-4444-4444-8444-444444444444"
 ISSUE_POINTER = f"/issuesById/{ISSUE_ID}/title"
+DECISION_ID = "88888888-8888-4888-8888-888888888888"
+DECISION_POINTER = f"/decisionsById/{DECISION_ID}/title"
 CANONICAL_RISK = {
     "object_id": RISK_ID, "object_type": "risk", "title": "Stored delivery risk",
     "description": None, "owner": None, "lifecycle_phase": "initiation",
@@ -278,6 +280,19 @@ class IntelligenceServiceTests(unittest.TestCase):
         self.assertIn(pointer, reordered_catalog)
         provider = deepcopy(PROVIDER_RESULT); provider["findings"][1]["evidence_refs"] = [pointer]
         self.assertEqual(finalize_intelligence_analysis(provider, catalog)["findings"][1]["evidence_refs"], [pointer])
+
+    def test_decision_evidence_is_stable_when_array_reorders_and_preserves_contract_v1(self):
+        first = {"object_id": DECISION_ID, "title": "Approve staged rollout"}
+        second = {"object_id": "99999999-9999-4999-8999-999999999999", "title": "Select vendor"}
+        snapshot, catalog = extract_intelligence_evidence({**PROGRAM, "decisions": [first, second]})
+        reordered, reordered_catalog = extract_intelligence_evidence({**PROGRAM, "decisions": [second, first]})
+        self.assertEqual(snapshot["decisionsById"][DECISION_ID], reordered["decisionsById"][DECISION_ID])
+        self.assertIn(DECISION_POINTER, catalog)
+        self.assertIn(DECISION_POINTER, reordered_catalog)
+        provider = deepcopy(PROVIDER_RESULT); provider["findings"][1]["evidence_refs"] = [DECISION_POINTER]
+        result = finalize_intelligence_analysis(provider, catalog)
+        self.assertEqual(result["schema_version"], "1.0.0")
+        self.assertEqual(result["findings"][1]["evidence_refs"], [DECISION_POINTER])
 
     def test_canonical_action_preserves_contract_v1_bounded_description(self):
         canonical = {

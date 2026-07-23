@@ -13,7 +13,7 @@ import {
   StatusCard,
 } from './ExecutiveWorkspaceComponents';
 import { getProgram, getProgramIntelligence } from './programApi';
-import type { IntelligenceResponse, ProgramAction, ProgramDependency, ProgramIssue, ProgramRecord, ProgramRisk } from './programTypes';
+import type { IntelligenceResponse, ProgramAction, ProgramDecisionRecord, ProgramDependency, ProgramIssue, ProgramRecord, ProgramRisk } from './programTypes';
 import { usableText } from './programTypes';
 
 interface Milestone { date?: string; title: string; description?: string; status?: string }
@@ -36,6 +36,7 @@ function storedActions(program: ProgramRecord): ProgramAction[] { return program
 function storedRisks(program: ProgramRecord): ProgramRisk[] { return program.risks ?? []; }
 function storedIssues(program: ProgramRecord): ProgramIssue[] { return program.issues ?? []; }
 function storedDependencies(program: ProgramRecord): ProgramDependency[] { return program.dependencies ?? []; }
+function storedDecisions(program: ProgramRecord): ProgramDecisionRecord[] { return program.decisions ?? []; }
 
 function displayDate(value: unknown): string | undefined {
   const text = usableText(value);
@@ -148,6 +149,7 @@ export function ProgramWorkspacePage() {
   const risks = storedRisks(program);
   const issues = storedIssues(program);
   const dependencies = storedDependencies(program);
+  const decisions = storedDecisions(program);
 
   return (
     <PageContainer>
@@ -279,6 +281,26 @@ export function ProgramWorkspacePage() {
                 ].filter(Boolean).map((detail) => <Typography key={String(detail)} variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>{detail}</Typography>)}
               </Paper>
             )) : <Typography color="text.secondary">No stored program dependencies are available.</Typography>}
+          </Stack>
+        </WorkspaceSection>
+
+        <WorkspaceSection title="Decision Records" description="Canonical decisions explicitly persisted with the program; this view is read-only.">
+          <Stack spacing={1.5}>
+            {decisions.length ? decisions.map((decision) => (
+              <Paper key={decision.object_id} variant="outlined" sx={{ p: 2 }}>
+                <Typography fontWeight={600}>{decision.title}</Typography>
+                {[
+                  `Status: ${decision.status}`,
+                  decision.decision && `Decision: ${decision.decision}`,
+                  decision.rationale && `Rationale: ${decision.rationale}`,
+                  decision.owner && `Owner: ${decision.owner.display_name}`,
+                  decision.decision_date && `Decision date: ${decision.decision_date}`,
+                  decision.review_date && `Review date: ${decision.review_date}`,
+                  decision.impact && `Impact: ${decision.impact}`,
+                  decision.alternatives_considered.length && `Alternatives considered: ${decision.alternatives_considered.join('; ')}`,
+                ].filter(Boolean).map((detail) => <Typography key={String(detail)} variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>{detail}</Typography>)}
+              </Paper>
+            )) : <Typography color="text.secondary">No decision records are available.</Typography>}
           </Stack>
         </WorkspaceSection>
 

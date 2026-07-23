@@ -18,6 +18,7 @@ from program_domain import (
     DomainSource,
     DependencyStatus,
     DependencyType,
+    DecisionStatus,
     DomainValidationError,
     LifecyclePhase,
     ProgramRelationship,
@@ -30,10 +31,12 @@ from program_domain import (
     IssueStatus,
     create_action,
     create_dependency,
+    create_decision_record,
     create_risk,
     create_issue,
     normalize_action,
     normalize_dependency,
+    normalize_decision_record,
     normalize_program_entities,
     normalize_risk,
     normalize_issue,
@@ -41,6 +44,61 @@ from program_domain import (
 
 
 class ProgramDomainTests(unittest.TestCase):
+    def test_decision_record_creation_legacy_compatibility_and_relationships(self):
+        decision = create_decision_record(
+            "Approve staged rollout", decision="Use three deployment waves",
+            rationale="Limits operational exposure", alternatives_considered=["Big bang"],
+            owner="Program Sponsor", status="approved", decision_date="2026-07-22",
+            review_date="2026-08-22", impact="Timeline extends by two weeks",
+            lifecycle_phase="execution",
+        )
+        self.assertEqual(UUID(decision.object_id).version, 4)
+        self.assertEqual(decision.status, DecisionStatus.APPROVED)
+        self.assertNotIn("description", decision.to_dict())
+        legacy = {"decision_id": f"decision-{decision.object_id}", "decision": "Legacy choice", "status": "Approved"}
+        original = copy.deepcopy(legacy)
+        normalized = normalize_decision_record(legacy, "alpha", 0)
+        self.assertEqual(legacy, original)
+        self.assertEqual(normalized.object_id, decision.object_id)
+        self.assertEqual(normalize_decision_record("String choice", "alpha", 1).decision, "String choice")
+        for values, message in (
+            ({"status": "final"}, "status"), ({"decision_date": "today"}, "decision_date"),
+            ({"alternatives_considered": ["Same", "Same"]}, "duplicates"),
+        ):
+            with self.subTest(values=values), self.assertRaisesRegex(DomainValidationError, message):
+                create_decision_record("Valid decision", **values)
+
+        risk = create_risk("Rollout exposure")
+        relationship = ProgramRelationship(
+            relationship_id="88888888-8888-4888-8888-888888888888",
+            relationship_type=RelationshipType.RELATES_TO,
+            source_object_id=decision.object_id, target_object_id=risk.object_id,
+            created_at=None, source=DomainSource.MANUAL,
+        )
+        _actions, _risks, _issues, _dependencies, decisions, relationships = normalize_program_entities({
+            "program_id": "alpha", "risks": [risk.to_dict()], "decisions": [decision.to_dict()],
+            "relationships": [relationship.to_dict()],
+        })
+        self.assertEqual(decisions[0]["object_type"], "decision_record")
+        self.assertEqual(relationships[0]["relationship_type"], "relates_to")
+
+        targets = [risk, create_issue("Related issue"), create_dependency("Related dependency", dependency_type="internal"), create_action("Related action")]
+        for index, target in enumerate(targets):
+            edge = {**relationship.to_dict(), "relationship_id": f"00000000-0000-4000-8000-{index:012d}", "target_object_id": target.object_id}
+            program = {"program_id": "alpha", "decisions": [decision.to_dict()], "relationships": [edge]}
+            program[{"risk": "risks", "issue": "issues", "dependency": "dependencies", "action": "next_actions"}[target.object_type]] = [target.to_dict()]
+            with self.subTest(target=target.object_type):
+                normalize_program_entities(program)
+
+        reverse = relationship.to_dict()
+        reverse["source_object_id"], reverse["target_object_id"] = reverse["target_object_id"], reverse["source_object_id"]
+        with self.assertRaisesRegex(DomainValidationError, "DecisionRecord ->"):
+            normalize_program_entities({"program_id": "alpha", "risks": [risk.to_dict()], "decisions": [decision.to_dict()], "relationships": [reverse]})
+
+        duplicate = decision.to_dict(); duplicate["object_id"] = risk.object_id
+        with self.assertRaisesRegex(DomainValidationError, "object_id values must be unique"):
+            normalize_program_entities({"program_id": "alpha", "risks": [risk.to_dict()], "decisions": [duplicate]})
+
     def test_dependency_creation_compatibility_and_aggregate_relationships(self):
         dependency = create_dependency(
             "Vendor circuit", owner="Network Lead", dependency_type="vendor",
@@ -64,7 +122,7 @@ class ProgramDomainTests(unittest.TestCase):
             source_object_id=dependency.object_id, target_object_id=action.object_id,
             created_at=None, source=DomainSource.MANUAL,
         )
-        actions, _risks, _issues, dependencies, relationships = normalize_program_entities({
+        actions, _risks, _issues, dependencies, _decisions, relationships = normalize_program_entities({
             "program_id": "alpha", "next_actions": [action.to_dict()],
             "dependencies": [dependency.to_dict()], "relationships": [relationship.to_dict()],
         })
@@ -271,7 +329,7 @@ class ProgramDomainTests(unittest.TestCase):
             source_object_id=action.object_id, target_object_id=risk.object_id,
             created_at=None, source=DomainSource.MANUAL,
         )
-        _actions, _risks, _issues, _dependencies, relationships = normalize_program_entities({
+        _actions, _risks, _issues, _dependencies, _decisions, relationships = normalize_program_entities({
             "program_id": "alpha", "next_actions": [action.to_dict()],
             "risks": [risk.to_dict()], "relationships": [relationship.to_dict()],
         })
@@ -285,7 +343,7 @@ class ProgramDomainTests(unittest.TestCase):
             "target_object_id": "44444444-4444-4444-8444-444444444444",
             "created_at": None, "source": "manual",
         }
-        _actions, _risks, issues, _dependencies, relationships = normalize_program_entities({
+        _actions, _risks, issues, _dependencies, _decisions, relationships = normalize_program_entities({
                 "program_id": "alpha", "next_actions": [], "risks": [risk.to_dict()],
                 "issues": [{"issue_id": "issue-44444444-4444-4444-8444-444444444444", "description": "Legacy issue"}],
                 "relationships": [relationship],
@@ -320,7 +378,7 @@ class ProgramDomainTests(unittest.TestCase):
             source=DomainSource.MANUAL,
         )
 
-        actions, risks, issues, _dependencies, relationships = normalize_program_entities({
+        actions, risks, issues, _dependencies, _decisions, relationships = normalize_program_entities({
             "program_id": "alpha",
             "next_actions": [first.to_dict(), second.to_dict()],
             "relationships": [relationship.to_dict()],

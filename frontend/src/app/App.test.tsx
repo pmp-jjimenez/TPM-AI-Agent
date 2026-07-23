@@ -61,6 +61,18 @@ function canonicalDependency(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function canonicalDecision(overrides: Record<string, unknown> = {}) {
+  return {
+    object_id: '88888888-8888-4888-8888-888888888888', object_type: 'decision_record',
+    title: 'Approve staged rollout', decision: 'Use three deployment waves',
+    rationale: 'Limits operational exposure', alternatives_considered: ['Big bang'],
+    owner: { display_name: 'Program Sponsor', stakeholder_id: null }, status: 'approved',
+    decision_date: '2026-07-22', review_date: '2026-08-22', impact: 'Timeline extends by two weeks',
+    audit: { created_at: null, updated_at: null, source: 'legacy_import' }, lifecycle_phase: 'execution',
+    ...overrides,
+  };
+}
+
 const aiIntelligence = {
   schema_version: '1.0.0',
   program_id: 'alpha-program',
@@ -377,6 +389,24 @@ describe('Program workspace', () => {
     renderApp('/programs/alpha-program');
     expect(await screen.findByText('Program could not be loaded')).toBeInTheDocument();
     expect(screen.queryByText('Vendor circuit')).not.toBeInTheDocument();
+  });
+
+  it('strictly parses and renders decision records read-only', async () => {
+    mockFetchOnce({ ...alpha, decisions: [canonicalDecision()] });
+    renderApp('/programs/alpha-program');
+    expect(await screen.findByRole('heading', { level: 2, name: 'Decision Records' })).toBeInTheDocument();
+    expect(screen.getByText('Approve staged rollout')).toBeInTheDocument();
+    expect(screen.getByText('Decision: Use three deployment waves')).toBeInTheDocument();
+    expect(screen.getByText('Rationale: Limits operational exposure')).toBeInTheDocument();
+    expect(screen.getByText('Alternatives considered: Big bang')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /edit decision/i })).not.toBeInTheDocument();
+  });
+
+  it('rejects malformed canonical decision records', async () => {
+    mockFetchOnce({ ...alpha, decisions: [canonicalDecision({ status: 'final' })] });
+    renderApp('/programs/alpha-program');
+    expect(await screen.findByText('Program could not be loaded')).toBeInTheDocument();
+    expect(screen.queryByText('Approve staged rollout')).not.toBeInTheDocument();
   });
 
   it('declares single-column narrow breakpoints for executive status sections', async () => {

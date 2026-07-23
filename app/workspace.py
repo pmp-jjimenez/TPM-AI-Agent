@@ -2,8 +2,7 @@ from datetime import datetime
 
 from memory import load_program, save_program
 from executive import generate_executive_report
-from schema import generate_item_id
-from program_domain import create_action, create_dependency, create_issue, create_risk, utc_timestamp
+from program_domain import create_action, create_decision_record, create_dependency, create_issue, create_risk, utc_timestamp
 
 
 def show_summary(program):
@@ -181,11 +180,11 @@ def add_decision(program):
         print("Decision cannot be empty.")
         return
 
-    program["decisions"].append({
-        "decision_id": generate_item_id("decision"),
-        "description": decision,
-        "status": "Open"
-    })
+    program["decisions"].append(create_decision_record(
+        decision,
+        decision=decision,
+        lifecycle_phase=program.get("phase"),
+    ).to_dict())
 
     save_program(program)
     print("\nDecision added successfully.")

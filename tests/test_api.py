@@ -11,7 +11,7 @@ from backend.api.main import app
 
 
 CONTROLLED_PROGRAM = {
-    "schema_version": "1.4.0",
+    "schema_version": "1.5.0",
     "program_id": "controlled-program",
     "program_name": "Controlled Program",
     "description": "Program fixture isolated from repository persistence.",

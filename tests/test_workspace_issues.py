@@ -96,9 +96,8 @@ class WorkspaceIssueHelperTests(unittest.TestCase):
                 self.assertEqual(program["issues"][0]["object_type"], "issue")
                 self.assertEqual(UUID(program["issues"][0]["object_id"]).version, 4)
                 self.assertEqual(program["issues"][0]["owner"]["display_name"], "Issue Owner")
-                self.assertTrue(
-                    program["decisions"][0]["decision_id"].startswith("decision-")
-                )
+                self.assertEqual(program["decisions"][0]["object_type"], "decision_record")
+                self.assertEqual(UUID(program["decisions"][0]["object_id"]).version, 4)
                 self.assertEqual(program["next_actions"][0]["object_type"], "action")
                 self.assertRegex(
                     program["next_actions"][0]["object_id"],

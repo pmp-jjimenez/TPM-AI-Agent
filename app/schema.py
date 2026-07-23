@@ -5,8 +5,8 @@ from uuid import uuid4
 from program_domain import DomainValidationError, normalize_program_entities
 
 
-CURRENT_SCHEMA_VERSION = "1.4.0"
-SUPPORTED_SCHEMA_VERSIONS = (None, "1.0.0", "1.1.0", "1.2.0", "1.3.0", CURRENT_SCHEMA_VERSION)
+CURRENT_SCHEMA_VERSION = "1.5.0"
+SUPPORTED_SCHEMA_VERSIONS = (None, "1.0.0", "1.1.0", "1.2.0", "1.3.0", "1.4.0", CURRENT_SCHEMA_VERSION)
 
 DEFAULT_PHASE = "Program Initiation"
 DEFAULT_HEALTH = "Unknown"
@@ -89,13 +89,14 @@ def apply_compatibility_defaults(program):
     normalized["metadata"] = metadata
 
     try:
-        actions, risks, issues, dependencies, relationships = normalize_program_entities(normalized)
+        actions, risks, issues, dependencies, decisions, relationships = normalize_program_entities(normalized)
     except DomainValidationError as error:
         raise ValueError(f"Invalid Program domain data: {error}") from error
     normalized["next_actions"] = actions
     normalized["risks"] = risks
     normalized["issues"] = issues
     normalized["dependencies"] = dependencies
+    normalized["decisions"] = decisions
     normalized["relationships"] = relationships
 
     return normalized
