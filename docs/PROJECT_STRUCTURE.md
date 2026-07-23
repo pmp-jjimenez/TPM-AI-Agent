@@ -39,6 +39,7 @@ This document describes the repository as it exists today.
 │   └── schemas/
 │       └── README.md
 ├── app/
+│   ├── artifact_semantics.py
 │   ├── artifact_renderer.py
 │   ├── assets/
 │   │   └── fonts/
@@ -51,6 +52,7 @@ This document describes the repository as it exists today.
 │   ├── application_version.py
 │   ├── engine.py
 │   ├── executive.py
+│   ├── executive_artifact.py
 │   ├── executive_report.py
 │   ├── font_assets.py
 │   ├── intelligence.py
@@ -164,7 +166,10 @@ Reserved for future versioned schemas and cross-boundary model contracts. Its cu
 
 Python application modules shared by CLI and API. `executive_report.py` owns the
 immutable, renderer-independent Executive Status Report truth model and deterministic
-builder. `intelligence.py` is the side-effect-free orchestration boundary and
+builder. `artifact_semantics.py` owns the closed, immutable renderer-neutral
+presentation-intent vocabulary, and `executive_artifact.py` composes the truth model
+without recalculation, rendering, or data loss. `intelligence.py` is the side-effect-
+free orchestration boundary and
 `intelligence_analysis.py` owns strict bounded parsing; existing CLI modules continue
 to own input/output, persistence mutations, and generated artifacts.
 

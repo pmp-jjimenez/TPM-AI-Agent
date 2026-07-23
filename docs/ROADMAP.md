@@ -26,7 +26,11 @@ increment adds the isolated ReportLab dependency boundary, versioned Inter font
 assets, renderer-neutral result contracts, backend readiness diagnostics, and
 architecture evidence. Increment 2 adds the immutable ExecutiveReportViewModel,
 source classifications, deterministic active/count/ordering/recommendation policies,
-and explicit completeness notices. It does not add SemanticArtifact composition,
+and explicit completeness notices. Increment 3 adds the
+immutable renderer-neutral SemanticArtifact and Executive Status Report composer. It
+preserves view-model truth, exposes deterministic accessibility labels and recorded-
+data empty states, and selects the first ten already ordered records per collection
+by default while disclosing every omission. These increments add no design system,
 layout, file output, or Executive Status Report PDF generation.
 
 The v0.8.0 production deliverable remains one Executive Status Report PDF alongside

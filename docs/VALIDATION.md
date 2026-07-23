@@ -21,6 +21,11 @@ Current automated coverage validates:
 - Immutable ExecutiveReportViewModel construction, source classification, complete
   normalized collections, deterministic status/count/ordering/overdue/recommendation
   policies, compatibility safety, and completeness notices without ReportLab.
+- Immutable SemanticArtifact contracts, the closed eight-component vocabulary, exact
+  executive component order, accessibility labels, truthful empty states, and
+  selection policy 1.0. Composer tests prove that default/custom limits disclose
+  omissions, preserve supplied ordering and classifications, and leave the complete
+  view model unchanged.
 - Program memory create, save, and reload behavior in a temporary directory.
 - Prompt builder inclusion of project description, TPM context, and expected assessment sections.
 - Executive report generation in a temporary reports directory.
@@ -34,7 +39,7 @@ The automated tests do not validate:
 - Real report generation under `reports/`.
 - Generated session files under `sessions/`.
 - Final Executive Status Report PDF content, layout, pagination, and visual quality.
-- Future SemanticArtifact selection and presentation composition.
+- Future Artifact Design System, renderer layout, and artifact output behavior.
 - Future Docker, incident, readiness, PowerPoint, or HTML artifact workflows.
 
 ## Environment Doctor

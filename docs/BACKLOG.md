@@ -6,7 +6,7 @@ This backlog distinguishes completed work, in-progress documentation work, plann
 |---|---|---|---|---|---|
 | v0.7.0 | Foundation & Experience | Establish the first demonstrable TPM Operating System product release. | Canonical program domain; read-only API; Application Shell; Home Command Center; Programs experience; Program Mission Control; Product Design System; responsive and accessibility foundations; product identity. | Complete | High |
 | v0.8.0 | Executive Artifacts | Establish a professional, reusable artifact-generation foundation beginning with an Executive Status Report PDF. | Renderer-neutral contract; isolated PDF backend; versioned typography; semantic report model; Artifact Design System; executive-ready PDF; validation and visual quality gates. | In Progress | High |
-| ART-1.0 | Executive Artifact Foundation | Deliver one production Executive Status Report PDF without replacing the existing Markdown report. | Increment 1: ReportLab and renderer isolation. Increment 2: immutable, source-traceable ExecutiveReportViewModel and deterministic truth policies. Later increments: semantic composition, design system, PDF layout, safe output, and explicit CLI action. | In Progress | High |
+| ART-1.0 | Executive Artifact Foundation | Deliver one production Executive Status Report PDF without replacing the existing Markdown report. | Increment 1: ReportLab and renderer isolation. Increment 2: immutable, source-traceable ExecutiveReportViewModel and deterministic truth policies. Increment 3: immutable SemanticArtifact and executive composition. Later increments: design system, PDF layout, safe output, and explicit CLI action. | In Progress | High |
 | DX-1.0 | Developer Console | Establish the next engineering increment and improve the local developer operating experience before v0.8 intelligence expansion. | One interactive and command-line entry point; environment validation; safe backend/frontend lifecycle; status; tests; build; release check; existing CLI launch; local logs and PID metadata. | Completed | High |
 | Epic 40 | Program Workspace Issue Management | Improve active program execution by tracking issues with ownership and closure. | Add issues to workspace; capture owner; capture due date; validate due date format; list open issues; close issues; improve return-to-workspace feedback. | Completed | High |
 | Epic 41 | Engineering Documentation Foundation | Establish core engineering and product documentation for maintainability and planning. | Product vision; roadmap; backlog; architecture; release history. | Completed | High |
@@ -40,8 +40,10 @@ This backlog distinguishes completed work, in-progress documentation work, plann
 - v0.7.0 Foundation & Experience is complete. Its canonical release record is
   [docs/releases/v0.7.0-foundation-and-experience.md](releases/v0.7.0-foundation-and-experience.md).
 - v0.8.0 Executive Artifacts is the planned next product release. ART-1.0 is in
-  progress; Increments 1 and 2 establish renderer isolation and the complete
-  renderer-independent Executive Report truth model. SemanticArtifact composition,
+  progress; Increments 1–3 establish renderer isolation, the complete report truth
+  model, and renderer-neutral SemanticArtifact composition. The closed eight-
+  component vocabulary uses selection policy 1.0 with a ten-record default and
+  explicit omitted counts without removing records from the view model. Design,
   layout, and PDF generation remain unimplemented.
 - Epic 40 is marked completed based on Git history and current workspace behavior.
 - Epic 41 and Epic 42 are documentation foundation epics completed by this controlled change set.
